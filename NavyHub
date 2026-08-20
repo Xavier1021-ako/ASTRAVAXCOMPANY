@@ -1,8 +1,9 @@
---// ASTRAVAXCOMPANY
---// Navy Hub (Beta)
---// Naoya Run + Superman-Style Hero Flight
---// ONE LocalScript
---// StarterPlayer > StarterPlayerScripts
+--========================================================
+-- ASTRAVAXCOMPANY
+-- Navy Hub (Beta)
+-- Naoya Run + Superman Hero Flight
+-- ONE LocalScript
+--========================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -12,72 +13,85 @@ local Debris = game:GetService("Debris")
 
 local Player = Players.LocalPlayer
 
---==================================================
+--========================================================
 -- SETTINGS
---==================================================
+--========================================================
 
 local RUN_SPEED = 190
 
 local AFTERIMAGE_RATE = 0.16
 local AFTERIMAGE_LIFETIME = 0.9
 
-local FLY_SPEED = 120
-local FLY_ACCELERATION = 7
+local FLY_SPEED = 150
+local FLY_ACCELERATION = 10
 
 local VOID_COLOR = Color3.fromRGB(85, 20, 170)
 local DARK_VOID = Color3.fromRGB(3, 0, 10)
 
-local running = false
-local flying = false
+--========================================================
+-- STATE
+--========================================================
 
-local character
-local humanoid
-local root
+local Character
+local Humanoid
+local Root
 
-local runConnection
-local flyConnection
+local Running = false
+local Flying = false
 
-local flightVelocity = Vector3.zero
-local flightStart = 0
+local RunConnection
+local FlyConnection
 
--- Motor6D originals
-local motorDefaults = {}
+local LinearVelocity
+local AlignOrientation
 
---==================================================
--- CHARACTER
---==================================================
+local OriginalMotors = {}
 
-local function setupCharacter(char)
-	character = char
-	humanoid = char:WaitForChild("Humanoid")
-	root = char:WaitForChild("HumanoidRootPart")
+local function getCharacter()
+	Character = Player.Character or Player.CharacterAdded:Wait()
+	Humanoid = Character:WaitForChild("Humanoid")
+	Root = Character:WaitForChild("HumanoidRootPart")
+end
 
-	motorDefaults = {}
+getCharacter()
 
-	for _, obj in ipairs(char:GetDescendants()) do
+--========================================================
+-- CHARACTER SETUP
+--========================================================
+
+local function cacheMotors()
+	OriginalMotors = {}
+
+	if not Character then
+		return
+	end
+
+	for _, obj in ipairs(Character:GetDescendants()) do
 		if obj:IsA("Motor6D") then
-			motorDefaults[obj] = obj.Transform
+			OriginalMotors[obj] = obj.Transform
 		end
 	end
 end
 
-if Player.Character then
-	setupCharacter(Player.Character)
-end
+cacheMotors()
 
 Player.CharacterAdded:Connect(function(char)
-	setupCharacter(char)
+	Character = char
+	Humanoid = char:WaitForChild("Humanoid")
+	Root = char:WaitForChild("HumanoidRootPart")
 
-	task.wait(0.25)
+	task.wait(0.2)
 
-	if running and humanoid then
-		humanoid.WalkSpeed = RUN_SPEED
+	cacheMotors()
+
+	if Running then
+		Humanoid.WalkSpeed = RUN_SPEED
 	end
 end)
 
---==================================================
+--========================================================
 -- UI
---==================================================
+--========================================================
 
 local GUI = Instance.new("ScreenGui")
 GUI.Name = "NavyHubBeta"
@@ -85,21 +99,22 @@ GUI.ResetOnSpawn = false
 GUI.Parent = Player:WaitForChild("PlayerGui")
 
 local Main = Instance.new("Frame")
-Main.Size = UDim2.fromOffset(250, 205)
-Main.Position = UDim2.new(0.5, -125, 0.6, -100)
+Main.Name = "NavyHub"
+Main.Size = UDim2.fromOffset(260, 215)
+Main.Position = UDim2.new(0.5, -130, 0.6, -105)
 Main.BackgroundColor3 = Color3.fromRGB(7, 7, 17)
 Main.BorderSizePixel = 0
 Main.Active = true
 Main.Parent = GUI
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 15)
-corner.Parent = Main
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 15)
+MainCorner.Parent = Main
 
-local outline = Instance.new("UIStroke")
-outline.Color = VOID_COLOR
-outline.Thickness = 2
-outline.Parent = Main
+local Outline = Instance.new("UIStroke")
+Outline.Color = VOID_COLOR
+Outline.Thickness = 2
+Outline.Parent = Main
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -20, 0, 35)
@@ -121,9 +136,9 @@ Status.TextSize = 12
 Status.Font = Enum.Font.GothamMedium
 Status.Parent = Main
 
---==================================================
+--========================================================
 -- INFINITE BAR
---==================================================
+--========================================================
 
 local BarBack = Instance.new("Frame")
 BarBack.Size = UDim2.new(1, -30, 0, 12)
@@ -155,257 +170,82 @@ BarText.TextSize = 9
 BarText.Font = Enum.Font.GothamBold
 BarText.Parent = BarBack
 
---==================================================
--- RUN BUTTON
---==================================================
+--========================================================
+-- BUTTON CREATOR
+--========================================================
 
-local RunButton = Instance.new("TextButton")
-RunButton.Size = UDim2.new(1, -30, 0, 42)
-RunButton.Position = UDim2.fromOffset(15, 85)
-RunButton.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
-RunButton.BorderSizePixel = 0
-RunButton.Text = "NAOYA RUN: OFF"
-RunButton.TextColor3 = Color3.fromRGB(225, 225, 240)
-RunButton.TextSize = 14
-RunButton.Font = Enum.Font.GothamBold
-RunButton.AutoButtonColor = false
-RunButton.Parent = Main
+local function makeButton(text, y)
+	local button = Instance.new("TextButton")
 
-local RunCorner = Instance.new("UICorner")
-RunCorner.CornerRadius = UDim.new(0, 10)
-RunCorner.Parent = RunButton
+	button.Size = UDim2.new(1, -30, 0, 42)
+	button.Position = UDim2.fromOffset(15, y)
+	button.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+	button.BorderSizePixel = 0
+	button.Text = text
+	button.TextColor3 = Color3.fromRGB(225, 225, 240)
+	button.TextSize = 14
+	button.Font = Enum.Font.GothamBold
+	button.AutoButtonColor = false
+	button.Parent = Main
 
---==================================================
--- FLY BUTTON
---==================================================
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 10)
+	c.Parent = button
 
-local FlyButton = Instance.new("TextButton")
-FlyButton.Size = UDim2.new(1, -30, 0, 42)
-FlyButton.Position = UDim2.fromOffset(15, 137)
-FlyButton.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
-FlyButton.BorderSizePixel = 0
-FlyButton.Text = "HERO FLY: OFF"
-FlyButton.TextColor3 = Color3.fromRGB(225, 225, 240)
-FlyButton.TextSize = 14
-FlyButton.Font = Enum.Font.GothamBold
-FlyButton.AutoButtonColor = false
-FlyButton.Parent = Main
+	return button
+end
 
-local FlyCorner = Instance.new("UICorner")
-FlyCorner.CornerRadius = UDim.new(0, 10)
-FlyCorner.Parent = FlyButton
+local RunButton = makeButton("NAOYA RUN: OFF", 85)
+local FlyButton = makeButton("HERO FLY: OFF", 137)
 
---==================================================
+--========================================================
 -- DRAG UI
---==================================================
+--========================================================
 
-local dragging = false
-local dragStart
-local startPosition
+local Dragging = false
+local DragStart
+local StartPosition
 
 Main.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1
 		or input.UserInputType == Enum.UserInputType.Touch then
 
-		dragging = true
-		dragStart = input.Position
-		startPosition = Main.Position
+		Dragging = true
+		DragStart = input.Position
+		StartPosition = Main.Position
 
 		input.Changed:Connect(function()
 			if input.UserInputState == Enum.UserInputState.End then
-				dragging = false
+				Dragging = false
 			end
 		end)
 	end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-	if not dragging then return end
+	if not Dragging then
+		return
+	end
 
 	if input.UserInputType == Enum.UserInputType.MouseMovement
 		or input.UserInputType == Enum.UserInputType.Touch then
 
-		local delta = input.Position - dragStart
+		local delta = input.Position - DragStart
 
 		Main.Position = UDim2.new(
-			startPosition.X.Scale,
-			startPosition.X.Offset + delta.X,
-			startPosition.Y.Scale,
-			startPosition.Y.Offset + delta.Y
+			StartPosition.X.Scale,
+			StartPosition.X.Offset + delta.X,
+			StartPosition.Y.Scale,
+			StartPosition.Y.Offset + delta.Y
 		)
 	end
 end)
 
---==================================================
--- HERO POSE
---==================================================
-
-local function findMotor(name)
-	if not character then return nil end
-
-	for _, obj in ipairs(character:GetDescendants()) do
-		if obj:IsA("Motor6D") and obj.Name == name then
-			return obj
-		end
-	end
-
-	return nil
-end
-
-local function applyHeroPose(moving, t)
-	if not character then return end
-
-	local rootJoint = findMotor("RootJoint")
-	local waist = findMotor("Waist")
-
-	local leftShoulder = findMotor("LeftShoulder")
-	local rightShoulder = findMotor("RightShoulder")
-
-	local leftHip = findMotor("LeftHip")
-	local rightHip = findMotor("RightHip")
-
-	local leftArm = findMotor("LeftShoulder")
-	local rightArm = findMotor("RightShoulder")
-
-	local wobble = math.sin(t * 4) * math.rad(3)
-
-	-- Superman flying:
-	-- arms forward, legs behind, body tilted
-
-	if moving then
-
-		if rootJoint then
-			rootJoint.Transform =
-				CFrame.Angles(
-					math.rad(-18),
-					0,
-					wobble
-				)
-		end
-
-		if waist then
-			waist.Transform =
-				CFrame.Angles(
-					math.rad(-10),
-					0,
-					-wobble
-				)
-		end
-
-		if leftShoulder then
-			leftShoulder.Transform =
-				CFrame.Angles(
-					math.rad(-65),
-					math.rad(-8),
-					math.rad(-18)
-				)
-		end
-
-		if rightShoulder then
-			rightShoulder.Transform =
-				CFrame.Angles(
-					math.rad(-65),
-					math.rad(8),
-					math.rad(18)
-				)
-		end
-
-		if leftHip then
-			leftHip.Transform =
-				CFrame.Angles(
-					math.rad(35),
-					0,
-					math.rad(-4)
-				)
-		end
-
-		if rightHip then
-			rightHip.Transform =
-				CFrame.Angles(
-					math.rad(35),
-					0,
-					math.rad(4)
-				)
-		end
-
-	else
-
-		-- Hovering Superman pose
-		-- Left foot slightly raised
-
-		if rootJoint then
-			rootJoint.Transform =
-				CFrame.Angles(
-					math.rad(-8) + wobble,
-					0,
-					math.rad(2)
-				)
-		end
-
-		if waist then
-			waist.Transform =
-				CFrame.Angles(
-					math.rad(-5),
-					0,
-					0
-				)
-		end
-
-		if leftShoulder then
-			leftShoulder.Transform =
-				CFrame.Angles(
-					math.rad(-55),
-					math.rad(-12),
-					math.rad(-15)
-				)
-		end
-
-		if rightShoulder then
-			rightShoulder.Transform =
-				CFrame.Angles(
-					math.rad(-55),
-					math.rad(12),
-					math.rad(15)
-				)
-		end
-
-		if leftHip then
-			leftHip.Transform =
-				CFrame.Angles(
-					math.rad(18),
-					0,
-					math.rad(-6)
-				)
-		end
-
-		if rightHip then
-			rightHip.Transform =
-				CFrame.Angles(
-					math.rad(-8),
-					0,
-					math.rad(3)
-				)
-		end
-	end
-end
-
---==================================================
--- RESET POSE
---==================================================
-
-local function resetPose()
-	for motor, transform in pairs(motorDefaults) do
-		if motor and motor.Parent then
-			motor.Transform = transform
-		end
-	end
-end
-
---==================================================
+--========================================================
 -- VOID PARTICLE
---==================================================
+--========================================================
 
-local function createVoidParticle(position)
+local function voidParticle(position, velocity)
 	local p = Instance.new("Part")
 
 	p.Shape = Enum.PartType.Ball
@@ -419,6 +259,7 @@ local function createVoidParticle(position)
 
 	p.Material = Enum.Material.Neon
 	p.Color = VOID_COLOR
+	p.Transparency = 0.1
 
 	p.Parent = workspace
 
@@ -426,6 +267,7 @@ local function createVoidParticle(position)
 		p,
 		TweenInfo.new(0.7),
 		{
+			Position = position + velocity,
 			Transparency = 1,
 			Size = Vector3.new(0.01, 0.01, 0.01)
 		}
@@ -434,64 +276,57 @@ local function createVoidParticle(position)
 	Debris:AddItem(p, 0.8)
 end
 
---==================================================
--- DUST DEVIL
---==================================================
+--========================================================
+-- SMALL VOID DUST DEVIL
+--========================================================
 
-local function createDustDevil(position)
+local function dustDevil(position)
 	local folder = Instance.new("Folder")
 	folder.Name = "NavyVoidDustDevil"
 	folder.Parent = workspace
 
 	local core = Instance.new("Part")
 	core.Shape = Enum.PartType.Ball
-	core.Size = Vector3.new(0.65, 0.65, 0.65)
+	core.Size = Vector3.new(0.6, 0.6, 0.6)
 	core.Position = position
-
 	core.Anchored = true
 	core.CanCollide = false
 	core.CanTouch = false
 	core.CanQuery = false
-
 	core.Material = Enum.Material.Neon
 	core.Color = DARK_VOID
 	core.Parent = folder
 
-	local glow = Instance.new("PointLight")
-	glow.Color = VOID_COLOR
-	glow.Brightness = 2
-	glow.Range = 6
-	glow.Parent = core
+	local light = Instance.new("PointLight")
+	light.Color = VOID_COLOR
+	light.Brightness = 2
+	light.Range = 6
+	light.Parent = core
 
-	for i = 1, 9 do
+	for i = 1, 8 do
+		local angle = (i / 8) * math.pi * 2
+		local radius = 0.3 + i * 0.1
+		local height = -0.7 + i * 0.2
 
-		local angle = (i / 9) * math.pi * 2
-		local radius = 0.3 + i * 0.12
-		local height = -0.8 + i * 0.22
+		local p = Instance.new("Part")
+		p.Shape = Enum.PartType.Ball
+		p.Size = Vector3.new(0.16, 0.16, 0.16)
+		p.Position = position + Vector3.new(
+			math.cos(angle) * radius,
+			height,
+			math.sin(angle) * radius
+		)
 
-		local swirl = Instance.new("Part")
-
-		swirl.Shape = Enum.PartType.Ball
-		swirl.Size = Vector3.new(0.17, 0.17, 0.17)
-
-		swirl.Position =
-			position + Vector3.new(
-				math.cos(angle) * radius,
-				height,
-				math.sin(angle) * radius
-			)
-
-		swirl.Anchored = true
-		swirl.CanCollide = false
-		swirl.CanTouch = false
-		swirl.CanQuery = false
-
-		swirl.Material = Enum.Material.Neon
-		swirl.Color = VOID_COLOR
-		swirl.Parent = folder
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanTouch = false
+		p.CanQuery = false
+		p.Material = Enum.Material.Neon
+		p.Color = VOID_COLOR
+		p.Parent = folder
 
 		TweenService:Create(
-			swirl,
+			p,
 			TweenInfo.new(AFTERIMAGE_LIFETIME),
 			{
 				Transparency = 1,
@@ -505,26 +340,27 @@ local function createDustDevil(position)
 		TweenInfo.new(AFTERIMAGE_LIFETIME),
 		{
 			Transparency = 1,
-			Size = Vector3.new(0.03, 0.03, 0.03)
+			Size = Vector3.new(0.02, 0.02, 0.02)
 		}
 	):Play()
 
 	Debris:AddItem(folder, AFTERIMAGE_LIFETIME + 0.1)
 end
 
---==================================================
+--========================================================
 -- AFTERIMAGE
---==================================================
+--========================================================
 
 local function createAfterimage()
-	if not character or not root then return end
+	if not Character or not Root then
+		return
+	end
 
 	local folder = Instance.new("Folder")
 	folder.Name = "NavyVoidAfterimage"
 	folder.Parent = workspace
 
-	for _, original in ipairs(character:GetDescendants()) do
-
+	for _, original in ipairs(Character:GetDescendants()) do
 		if original:IsA("BasePart")
 			and original.Transparency < 1
 			and original.Name ~= "HumanoidRootPart" then
@@ -533,8 +369,8 @@ local function createAfterimage()
 
 			copy.Size = original.Size
 			copy.CFrame = original.CFrame
-
 			copy.Anchored = true
+
 			copy.CanCollide = false
 			copy.CanTouch = false
 			copy.CanQuery = false
@@ -555,9 +391,7 @@ local function createAfterimage()
 		end
 	end
 
-	createDustDevil(
-		root.Position + Vector3.new(0, 1.5, 0)
-	)
+	dustDevil(Root.Position + Vector3.new(0, 1.2, 0))
 
 	Debris:AddItem(
 		folder,
@@ -565,27 +399,214 @@ local function createAfterimage()
 	)
 end
 
---==================================================
+--========================================================
+-- FIND MOTOR
+--========================================================
+
+local function findMotor(names)
+	if not Character then
+		return nil
+	end
+
+	for _, name in ipairs(names) do
+		for _, obj in ipairs(Character:GetDescendants()) do
+			if obj:IsA("Motor6D") and obj.Name == name then
+				return obj
+			end
+		end
+	end
+
+	return nil
+end
+
+--========================================================
+-- SUPERMAN POSE
+--========================================================
+
+local function heroPose(moving, time)
+	if not Character then
+		return
+	end
+
+	-- Works with R6 and common R15 joint names.
+	local rootJoint = findMotor({"RootJoint", "Root"})
+
+	local waist = findMotor({"Waist"})
+
+	local leftShoulder = findMotor({
+		"Left Shoulder",
+		"LeftShoulder"
+	})
+
+	local rightShoulder = findMotor({
+		"Right Shoulder",
+		"RightShoulder"
+	})
+
+	local leftHip = findMotor({
+		"Left Hip",
+		"LeftHip"
+	})
+
+	local rightHip = findMotor({
+		"Right Hip",
+		"RightHip"
+	})
+
+	local wobble = math.sin(time * 3.5) * math.rad(3)
+
+	if moving then
+		--========================================
+		-- SUPERMAN MOVING
+		--========================================
+
+		if rootJoint then
+			rootJoint.Transform =
+				CFrame.Angles(
+					math.rad(-15),
+					0,
+					wobble
+				)
+		end
+
+		if waist then
+			waist.Transform =
+				CFrame.Angles(
+					math.rad(-10),
+					0,
+					-wobble
+				)
+		end
+
+		if leftShoulder then
+			leftShoulder.Transform =
+				CFrame.Angles(
+					math.rad(-75),
+					0,
+					math.rad(-12)
+				)
+		end
+
+		if rightShoulder then
+			rightShoulder.Transform =
+				CFrame.Angles(
+					math.rad(-75),
+					0,
+					math.rad(12)
+				)
+		end
+
+		if leftHip then
+			leftHip.Transform =
+				CFrame.Angles(
+					math.rad(30),
+					0,
+					math.rad(-4)
+				)
+		end
+
+		if rightHip then
+			rightHip.Transform =
+				CFrame.Angles(
+					math.rad(30),
+					0,
+					math.rad(4)
+				)
+		end
+
+	else
+		--========================================
+		-- SUPERMAN HOVER IDLE
+		-- LEFT FOOT SLIGHTLY RAISED
+		--========================================
+
+		if rootJoint then
+			rootJoint.Transform =
+				CFrame.Angles(
+					math.rad(-7) + wobble,
+					0,
+					math.rad(2)
+				)
+		end
+
+		if waist then
+			waist.Transform =
+				CFrame.Angles(
+					math.rad(-5),
+					0,
+					0
+				)
+		end
+
+		if leftShoulder then
+			leftShoulder.Transform =
+				CFrame.Angles(
+					math.rad(-60),
+					0,
+					math.rad(-12)
+				)
+		end
+
+		if rightShoulder then
+			rightShoulder.Transform =
+				CFrame.Angles(
+					math.rad(-60),
+					0,
+					math.rad(12)
+				)
+		end
+
+		-- Left leg raised slightly
+		if leftHip then
+			leftHip.Transform =
+				CFrame.Angles(
+					math.rad(15),
+					0,
+					math.rad(-5)
+				)
+		end
+
+		-- Right leg lower
+		if rightHip then
+			rightHip.Transform =
+				CFrame.Angles(
+					math.rad(-5),
+					0,
+					math.rad(3)
+				)
+		end
+	end
+end
+
+--========================================================
+-- RESET POSE
+--========================================================
+
+local function resetPose()
+	for motor, transform in pairs(OriginalMotors) do
+		if motor and motor.Parent then
+			motor.Transform = transform
+		end
+	end
+end
+
+--========================================================
 -- CRASH EXPLOSION
---==================================================
+--========================================================
 
 local function crashExplosion(position)
-
 	local folder = Instance.new("Folder")
 	folder.Name = "NavyVoidCrash"
 	folder.Parent = workspace
 
 	local core = Instance.new("Part")
-
 	core.Shape = Enum.PartType.Ball
 	core.Size = Vector3.new(1, 1, 1)
 	core.Position = position
-
 	core.Anchored = true
 	core.CanCollide = false
 	core.CanTouch = false
 	core.CanQuery = false
-
 	core.Material = Enum.Material.Neon
 	core.Color = DARK_VOID
 	core.Parent = folder
@@ -593,26 +614,23 @@ local function crashExplosion(position)
 	local light = Instance.new("PointLight")
 	light.Color = VOID_COLOR
 	light.Brightness = 8
-	light.Range = 18
+	light.Range = 20
 	light.Parent = core
 
-	local shockwave = Instance.new("Part")
-
-	shockwave.Shape = Enum.PartType.Cylinder
-	shockwave.Size = Vector3.new(0.15, 2, 2)
-
-	shockwave.CFrame =
+	local ring = Instance.new("Part")
+	ring.Shape = Enum.PartType.Cylinder
+	ring.Size = Vector3.new(0.15, 2, 2)
+	ring.CFrame =
 		CFrame.new(position)
 		* CFrame.Angles(0, 0, math.rad(90))
 
-	shockwave.Anchored = true
-	shockwave.CanCollide = false
-	shockwave.CanTouch = false
-	shockwave.CanQuery = false
-
-	shockwave.Material = Enum.Material.Neon
-	shockwave.Color = VOID_COLOR
-	shockwave.Parent = folder
+	ring.Anchored = true
+	ring.CanCollide = false
+	ring.CanTouch = false
+	ring.CanQuery = false
+	ring.Material = Enum.Material.Neon
+	ring.Color = VOID_COLOR
+	ring.Parent = folder
 
 	TweenService:Create(
 		core,
@@ -624,70 +642,104 @@ local function crashExplosion(position)
 	):Play()
 
 	TweenService:Create(
-		shockwave,
+		ring,
 		TweenInfo.new(0.55),
 		{
-			Size = Vector3.new(0.15, 14, 14),
+			Size = Vector3.new(0.15, 15, 15),
 			Transparency = 1
 		}
 	):Play()
 
 	for i = 1, 25 do
-
 		local angle = math.random() * math.pi * 2
 
-		local particle = Instance.new("Part")
+		local p = Instance.new("Part")
+		p.Shape = Enum.PartType.Ball
+		p.Size = Vector3.new(0.12, 0.12, 0.12)
+		p.Position = position
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanTouch = false
+		p.CanQuery = false
+		p.Material = Enum.Material.Neon
+		p.Color = VOID_COLOR
+		p.Parent = folder
 
-		particle.Shape = Enum.PartType.Ball
-		particle.Size = Vector3.new(0.12, 0.12, 0.12)
-
-		particle.Position =
-			position + Vector3.new(
-				math.cos(angle) * 0.5,
-				math.random(-5, 8) / 10,
-				math.sin(angle) * 0.5
-			)
-
-		particle.Anchored = true
-		particle.CanCollide = false
-		particle.CanTouch = false
-		particle.CanQuery = false
-
-		particle.Material = Enum.Material.Neon
-		particle.Color = VOID_COLOR
-		particle.Parent = folder
+		local distance = math.random(3, 7)
 
 		TweenService:Create(
-			particle,
+			p,
 			TweenInfo.new(0.5),
 			{
-				Position =
-					particle.Position
-					+ Vector3.new(
-						math.cos(angle) * math.random(3, 7),
-						math.random(1, 5),
-						math.sin(angle) * math.random(3, 7)
-					),
-
+				Position = position + Vector3.new(
+					math.cos(angle) * distance,
+					math.random(1, 5),
+					math.sin(angle) * distance
+				),
 				Transparency = 1
 			}
 		):Play()
 	end
 
-	Debris:AddItem(folder, 0.8)
+	Debris:AddItem(folder, 0.9)
 end
 
---==================================================
+--========================================================
+-- CREATE FLIGHT CONTROLLER
+--========================================================
+
+local function createFlightController()
+	if not Root then
+		return
+	end
+
+	if LinearVelocity then
+		LinearVelocity:Destroy()
+	end
+
+	if AlignOrientation then
+		AlignOrientation:Destroy()
+	end
+
+	local attachment = Root:FindFirstChild("NavyFlightAttachment")
+
+	if not attachment then
+		attachment = Instance.new("Attachment")
+		attachment.Name = "NavyFlightAttachment"
+		attachment.Parent = Root
+	end
+
+	-- Actual free-flight movement
+	LinearVelocity = Instance.new("LinearVelocity")
+	LinearVelocity.Name = "NavyFlightVelocity"
+	LinearVelocity.Attachment0 = attachment
+	LinearVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
+	LinearVelocity.MaxForce = math.huge
+	LinearVelocity.VectorVelocity = Vector3.zero
+	LinearVelocity.Parent = Root
+
+	-- Character orientation
+	AlignOrientation = Instance.new("AlignOrientation")
+	AlignOrientation.Name = "NavyFlightOrientation"
+	AlignOrientation.Attachment0 = attachment
+	AlignOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
+	AlignOrientation.MaxTorque = math.huge
+	AlignOrientation.MaxAngularVelocity = math.huge
+	AlignOrientation.Responsiveness = 30
+	AlignOrientation.Parent = Root
+end
+
+--========================================================
 -- RUN
---==================================================
+--========================================================
 
 local function enableRun()
+	if not Humanoid then
+		return
+	end
 
-	if not humanoid then return end
-
-	running = true
-
-	humanoid.WalkSpeed = RUN_SPEED
+	Running = true
+	Humanoid.WalkSpeed = RUN_SPEED
 
 	RunButton.Text = "NAOYA RUN: ON"
 	RunButton.BackgroundColor3 = Color3.fromRGB(80, 35, 160)
@@ -695,42 +747,42 @@ local function enableRun()
 	Status.Text = "NAOYA RUN • 190 SPEED"
 	Status.TextColor3 = Color3.fromRGB(180, 140, 255)
 
-	if runConnection then
-		runConnection:Disconnect()
+	if RunConnection then
+		RunConnection:Disconnect()
 	end
 
-	local last = 0
+	local lastAfterimage = 0
 
-	runConnection = RunService.RenderStepped:Connect(function()
+	RunConnection = RunService.RenderStepped:Connect(function()
+		if not Running then
+			return
+		end
 
-		if not running then return end
-
-		if humanoid then
-			humanoid.WalkSpeed = RUN_SPEED
+		if Humanoid and not Flying then
+			Humanoid.WalkSpeed = RUN_SPEED
 		end
 
 		Bar.Size = UDim2.fromScale(1, 1)
 
 		local now = os.clock()
 
-		if now - last >= AFTERIMAGE_RATE then
-			last = now
+		if now - lastAfterimage >= AFTERIMAGE_RATE then
+			lastAfterimage = now
 			createAfterimage()
 		end
 	end)
 end
 
 local function disableRun()
+	Running = false
 
-	running = false
-
-	if runConnection then
-		runConnection:Disconnect()
-		runConnection = nil
+	if RunConnection then
+		RunConnection:Disconnect()
+		RunConnection = nil
 	end
 
-	if humanoid and not flying then
-		humanoid.WalkSpeed = 16
+	if Humanoid and not Flying then
+		Humanoid.WalkSpeed = 16
 	end
 
 	RunButton.Text = "NAOYA RUN: OFF"
@@ -740,21 +792,23 @@ local function disableRun()
 	Status.TextColor3 = Color3.fromRGB(145, 145, 165)
 end
 
---==================================================
+--========================================================
 -- HERO FLY
---==================================================
+--========================================================
 
 local function enableFly()
-
-	if not humanoid or not root then
+	if not Humanoid or not Root then
 		return
 	end
 
-	flying = true
-	flightStart = os.clock()
-	flightVelocity = Vector3.zero
+	Flying = true
 
-	humanoid.AutoRotate = false
+	Humanoid.AutoRotate = false
+	Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+
+	createFlightController()
+
+	LinearVelocity.VectorVelocity = Vector3.zero
 
 	FlyButton.Text = "HERO FLY: ON"
 	FlyButton.BackgroundColor3 = Color3.fromRGB(80, 35, 160)
@@ -762,205 +816,119 @@ local function enableFly()
 	Status.Text = "SUPERMAN FLIGHT • ON"
 	Status.TextColor3 = Color3.fromRGB(180, 140, 255)
 
-	if flyConnection then
-		flyConnection:Disconnect()
+	if FlyConnection then
+		FlyConnection:Disconnect()
 	end
 
-	flyConnection = RunService.RenderStepped:Connect(function(dt)
+	local currentVelocity = Vector3.zero
 
-		if not flying or not root then
+	FlyConnection = RunService.RenderStepped:Connect(function(dt)
+		if not Flying or not Root then
 			return
 		end
 
 		local camera = workspace.CurrentCamera
 
-		local move = Vector3.zero
+		local direction = Vector3.zero
 
 		if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-			move += camera.CFrame.LookVector
+			direction += camera.CFrame.LookVector
 		end
 
 		if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-			move -= camera.CFrame.LookVector
+			direction -= camera.CFrame.LookVector
 		end
 
 		if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-			move -= camera.CFrame.RightVector
+			direction -= camera.CFrame.RightVector
 		end
 
 		if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-			move += camera.CFrame.RightVector
+			direction += camera.CFrame.RightVector
 		end
 
 		if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-			move += Vector3.yAxis
+			direction += Vector3.yAxis
 		end
 
 		if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-			move -= Vector3.yAxis
+			direction -= Vector3.yAxis
 		end
 
-		if move.Magnitude > 0 then
-			move = move.Unit * FLY_SPEED
+		local targetVelocity = Vector3.zero
+
+		if direction.Magnitude > 0.01 then
+			targetVelocity = direction.Unit * FLY_SPEED
 		end
 
-		-- Smooth acceleration
-		flightVelocity =
-			flightVelocity:Lerp(
-				move,
-				math.clamp(dt * FLY_ACCELERATION, 0, 1)
-			)
-
-		root.AssemblyLinearVelocity = flightVelocity
-
-		-- Face camera direction
-		local look = camera.CFrame.LookVector
-
-		if look.Magnitude > 0 then
-
-			local t = os.clock() - flightStart
-
-			local wobble =
-				math.sin(t * 4) * math.rad(3)
-
-			root.CFrame =
-				CFrame.lookAt(
-					root.Position,
-					root.Position + look
-				)
-				* CFrame.Angles(
-					math.rad(-8),
-					0,
-					wobble
-				)
-		end
-
-		-- Superman pose
-		applyHeroPose(
-			move.Magnitude > 5,
-			os.clock() - flightStart
+		currentVelocity = currentVelocity:Lerp(
+			targetVelocity,
+			math.clamp(dt * FLY_ACCELERATION, 0, 1)
 		)
 
-		-- Void flight trail
-		if math.random() < 0.35 then
+		LinearVelocity.VectorVelocity = currentVelocity
 
-			createVoidParticle(
-				root.Position
-				- camera.CFrame.LookVector * 1.7
+		-- Face movement direction, otherwise face camera
+		local lookDirection
+
+		if direction.Magnitude > 0.01 then
+			lookDirection = direction.Unit
+		else
+			lookDirection = camera.CFrame.LookVector
+		end
+
+		local t = os.clock()
+
+		local wobble =
+			math.sin(t * 3.5) * math.rad(3)
+
+		local targetCFrame =
+			CFrame.lookAt(
+				Root.Position,
+				Root.Position + lookDirection
+			)
+			* CFrame.Angles(
+				math.rad(-10),
+				0,
+				wobble
+			)
+
+		AlignOrientation.CFrame = targetCFrame
+
+		-- Actual procedural Superman pose
+		heroPose(
+			direction.Magnitude > 0.01,
+			t
+		)
+
+		-- Trail
+		if direction.Magnitude > 0.01 and math.random() < 0.35 then
+			voidParticle(
+				Root.Position
+					- lookDirection * 1.8,
+				-lookDirection * 2
 			)
 		end
 	end)
 end
 
---==================================================
--- STOP FLY
---==================================================
+--========================================================
+-- DISABLE FLIGHT
+--========================================================
 
 local function disableFly()
+	if not Flying then
+		return
+	end
 
-	if not flying then return end
+	Flying = false
 
-	flying = false
-
-	if flyConnection then
-		flyConnection:Disconnect()
-		flyConnection = nil
+	if FlyConnection then
+		FlyConnection:Disconnect()
+		FlyConnection = nil
 	end
 
 	local crashPosition
 
-	if root then
-
-		local params = RaycastParams.new()
-		params.FilterType = Enum.RaycastFilterType.Exclude
-		params.FilterDescendantsInstances = {character}
-
-		local result =
-			workspace:Raycast(
-				root.Position,
-				Vector3.new(0, -1000, 0),
-				params
-			)
-
-		if result then
-			crashPosition =
-				result.Position
-				+ Vector3.new(0, 0.15, 0)
-		else
-			crashPosition = root.Position
-		end
-
-		root.AssemblyLinearVelocity = Vector3.zero
-	end
-
-	resetPose()
-
-	if humanoid then
-		humanoid.AutoRotate = true
-
-		if running then
-			humanoid.WalkSpeed = RUN_SPEED
-		else
-			humanoid.WalkSpeed = 16
-		end
-	end
-
-	if crashPosition then
-		crashExplosion(crashPosition)
-	end
-
-	FlyButton.Text = "HERO FLY: OFF"
-	FlyButton.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
-
-	Status.Text =
-		running
-		and "NAOYA RUN • 190 SPEED"
-		or "NAOYA RUN • OFF"
-end
-
---==================================================
--- BUTTONS
---==================================================
-
-RunButton.MouseButton1Click:Connect(function()
-
-	if running then
-		disableRun()
-	else
-		enableRun()
-	end
-end)
-
-FlyButton.MouseButton1Click:Connect(function()
-
-	if flying then
-		disableFly()
-	else
-		enableFly()
-	end
-end)
-
---==================================================
--- CLEANUP
---==================================================
-
-Player.CharacterRemoving:Connect(function()
-
-	if flyConnection then
-		flyConnection:Disconnect()
-		flyConnection = nil
-	end
-
-	if runConnection then
-		runConnection:Disconnect()
-		runConnection = nil
-	end
-end)
-
-print("================================")
-print(" NAVY HUB (BETA)")
-print(" Naoya Run: 190")
-print(" Afterimage: 0.9s")
-print(" Superman Flight: READY")
-print(" Void Crash: READY")
-print("================================")
+	if Root then
+		local params = Ray
