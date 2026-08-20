@@ -11,9 +11,6 @@ local UserInputService = game:GetService("UserInputService")
 local Debris = game:GetService("Debris")
 
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
-local root = character:WaitForChild("HumanoidRootPart")
 
 local RUN_SPEED = 190
 local FLY_SPEED = 190
@@ -29,6 +26,8 @@ local root
 
 local running = false
 local flying = false
+local effectsEnabled = true
+local jumpRequested = false
 
 local runConnection
 local flyConnection
@@ -36,6 +35,10 @@ local flyConnection
 local flightAttachment
 local flightVelocity
 local flightOrientation
+
+--========================================================
+-- CHARACTER
+--========================================================
 
 local function setupCharacter(char)
 	character = char
@@ -49,10 +52,12 @@ setupCharacter(player.Character or player.CharacterAdded:Wait())
 -- UI
 --========================================================
 
+local playerGui = player:WaitForChild("PlayerGui")
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "NavyHubBeta"
 gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Parent = playerGui
 
 local main = Instance.new("Frame")
 main.Name = "NavyHub"
@@ -124,6 +129,7 @@ barText.Parent = barBack
 
 local function createButton(text, y)
 	local button = Instance.new("TextButton")
+
 	button.Size = UDim2.new(1, -30, 0, 43)
 	button.Position = UDim2.fromOffset(15, y)
 	button.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
@@ -141,10 +147,13 @@ local function createButton(text, y)
 	return button
 end
 
-local runButton = createButton("NAOYA RUN: OFF", 88)
-local flyButton = createButton("HERO FLY: OFF", 140)
+--========================================================
+-- BUTTON NAMES
+--========================================================
 
-local effectsButton = createButton("VOID EFFECTS: ON", 192)
+local runButton = createButton("VoidEmperor", 88)
+local flyButton = createButton("Void Flight", 140)
+local effectsButton = createButton("Load Effects Of the Void", 192)
 
 --========================================================
 -- DRAGGABLE UI
@@ -195,8 +204,6 @@ end)
 -- VOID EFFECTS
 --========================================================
 
-local effectsEnabled = true
-
 local function createAfterimage()
 	if not effectsEnabled or not character then
 		return
@@ -212,6 +219,7 @@ local function createAfterimage()
 			and object.Transparency < 1 then
 
 			local ghost = Instance.new("Part")
+
 			ghost.Size = object.Size
 			ghost.CFrame = object.CFrame
 			ghost.Anchored = true
@@ -250,13 +258,16 @@ local function createDustDevil(position)
 		local radius = 0.25 + i * 0.12
 
 		local particle = Instance.new("Part")
+
 		particle.Shape = Enum.PartType.Ball
 		particle.Size = Vector3.new(0.16, 0.16, 0.16)
+
 		particle.Position = position + Vector3.new(
 			math.cos(angle) * radius,
 			(i - 6) * 0.12,
 			math.sin(angle) * radius
 		)
+
 		particle.Anchored = true
 		particle.CanCollide = false
 		particle.CanTouch = false
@@ -292,6 +303,7 @@ local function createCrash(position)
 	folder.Parent = workspace
 
 	local core = Instance.new("Part")
+
 	core.Shape = Enum.PartType.Ball
 	core.Size = Vector3.new(100, 100, 100)
 	core.Position = position
@@ -355,7 +367,7 @@ local function createCrash(position)
 end
 
 --========================================================
--- NAOYA RUN
+-- VOIDEMPEROR
 --========================================================
 
 local function setRun(enabled)
@@ -364,9 +376,9 @@ local function setRun(enabled)
 	if enabled then
 		humanoid.WalkSpeed = RUN_SPEED
 
-		runButton.Text = "NAOYA RUN: ON"
-		runButton.BackgroundColor3 = Color3.fromRGB(80, 35, 160)
-		status.Text = "NAOYA RUN • 190 SPEED"
+		runButton.Text = "VoidEmperor: ON"
+		runButton.BackgroundColor3 = VOID
+		status.Text = "VOID EMPEROR • 190 SPEED"
 
 		if runConnection then
 			runConnection:Disconnect()
@@ -383,10 +395,9 @@ local function setRun(enabled)
 				humanoid.WalkSpeed = RUN_SPEED
 			end
 
-			bar.Size = UDim2.fromScale(1, 1)
-
 			if os.clock() - lastAfterimage >= AFTERIMAGE_INTERVAL then
 				lastAfterimage = os.clock()
+
 				createAfterimage()
 
 				if root then
@@ -404,194 +415,27 @@ local function setRun(enabled)
 			humanoid.WalkSpeed = 16
 		end
 
-		runButton.Text = "NAOYA RUN: OFF"
+		runButton.Text = "VoidEmperor"
 		runButton.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
 		status.Text = "READY"
 	end
 end
 
 --========================================================
--- HERO FLIGHT
+-- MOBILE JUMP
 --========================================================
 
-local function startFlight()
-	if not root or not humanoid then
-		return
-	end
-
-	flying = true
-
-	humanoid.AutoRotate = false
-	humanoid.PlatformStand = true
-
-	flightAttachment = Instance.new("Attachment")
-	flightAttachment.Parent = root
-
-	flightVelocity = Instance.new("LinearVelocity")
-	flightVelocity.Attachment0 = flightAttachment
-	flightVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
-	flightVelocity.MaxForce = math.huge
-	flightVelocity.VectorVelocity = Vector3.zero
-	flightVelocity.Parent = root
-
-	flightOrientation = Instance.new("AlignOrientation")
-	flightOrientation.Attachment0 = flightAttachment
-	flightOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
-	flightOrientation.MaxTorque = math.huge
-	flightOrientation.Responsiveness = 25
---========================================================
--- HERO FLIGHT - FREE FLY
---========================================================
-
-local function startFlight()
-	if not root or not humanoid then
-		return
-	end
-
-	flying = true
-
-	humanoid.AutoRotate = false
-	humanoid.PlatformStand = true
-
-	flightAttachment = Instance.new("Attachment")
-	flightAttachment.Parent = root
-
-	flightVelocity = Instance.new("LinearVelocity")
-	flightVelocity.Attachment0 = flightAttachment
-	flightVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
-	flightVelocity.MaxForce = math.huge
-	flightVelocity.VectorVelocity = Vector3.zero
-	flightVelocity.Parent = root
-
-	flightOrientation = Instance.new("AlignOrientation")
-	flightOrientation.Attachment0 = flightAttachment
-	flightOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
-	flightOrientation.MaxTorque = math.huge
-	flightOrientation.Responsiveness = 25
-	flightOrientation.Parent = root
-
-	flyButton.Text = "HERO FLY: ON"
-	flyButton.BackgroundColor3 = Color3.fromRGB(80, 35, 160)
-	status.Text = "SUPERMAN FLIGHT • FREE FLY"
-
-	local currentVelocity = Vector3.zero
-
-	flyConnection = RunService.RenderStepped:Connect(function(dt)
-		if not flying or not root or not flightVelocity then
-			return
-		end
-
-		local camera = workspace.CurrentCamera
-		if not camera then
-			return
-		end
-
-		local direction = Vector3.zero
-
-		-- FORWARD
-		if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-			direction += camera.CFrame.LookVector
-		end
-
-		-- BACK
-		if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-			direction -= camera.CFrame.LookVector
-		end
-
-		-- LEFT
-		if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-			direction -= camera.CFrame.RightVector
-		end
-
-		-- RIGHT
-		if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-			direction += camera.CFrame.RightVector
-		end
-
-		-- UP
-		if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-			direction += Vector3.new(0, 1, 0)
-		end
-
-		-- DOWN
-		if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-			direction -= Vector3.new(0, 1, 0)
-		end
-
-		if direction.Magnitude > 0 then
-			direction = direction.Unit
-		end
-
-		local targetVelocity = direction * FLY_SPEED
-
-		currentVelocity = currentVelocity:Lerp(
-			targetVelocity,
-			math.clamp(dt * 10, 0, 1)
-		)
-
-		flightVelocity.VectorVelocity = currentVelocity
-
-		-- Superman-style facing
-		local lookDirection
-
-		if direction.Magnitude > 0.01 then
-			lookDirection = direction
-		else
-			lookDirection = camera.CFrame.LookVector
-		end
-
-		flightOrientation.CFrame = CFrame.lookAt(
-			root.Position,
-			root.Position + lookDirection
-		)
-
-		-- Afterimages while flying
-		if effectsEnabled and direction.Magnitude > 0 then
-			if math.random() < 0.25 then
-				createAfterimage()
-			end
-		end
-	end)
-end
-
-local function stopFlight()
-	if not flying then
-		return
-	end
-
-	flying = false
-
-	if flyConnection then
-		flyConnection:Disconnect()
-		flyConnection = nil
-	end
-
-	local crashPosition = root and root.Position
-
-	if root then
-		local params = RaycastParams.new()
-		params.FilterType = Enum.RaycastFilterType.Exclude
-		params.FilterDescendantsInstances = {character}
-
-		local result = workspace:Raycast(
-			root.Position,
-			Vector3.new(0, -10000, 0),
-			params
-		)
---========================================================
--- HERO FLIGHT
--- DEFAULT ROBLOX JOYSTICK + PC CONTROLS
---========================================================
-
-local jumpRequested = false
-
--- Mobile/default Roblox jump button
 UserInputService.JumpRequest:Connect(function()
 	if flying then
 		jumpRequested = true
 	end
 end)
 
+--========================================================
+-- VOID FLIGHT
+-- DEFAULT ROBLOX JOYSTICK
+--========================================================
+
 local function startFlight()
 	if not root or not humanoid then
 		return
@@ -599,18 +443,15 @@ local function startFlight()
 
 	flying = true
 
-	-- IMPORTANT:
-	-- Do NOT use PlatformStand here.
-	-- Keeping the Humanoid active lets the default
-	-- Roblox mobile joystick continue working.
 	humanoid.AutoRotate = false
+	humanoid.PlatformStand = false
 
 	flightAttachment = Instance.new("Attachment")
-	flightAttachment.Name = "AstravaxFlightAttachment"
+	flightAttachment.Name = "AstravexFlightAttachment"
 	flightAttachment.Parent = root
 
 	flightVelocity = Instance.new("LinearVelocity")
-	flightVelocity.Name = "AstravaxFlightVelocity"
+	flightVelocity.Name = "AstravexFlightVelocity"
 	flightVelocity.Attachment0 = flightAttachment
 	flightVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
 	flightVelocity.MaxForce = math.huge
@@ -618,16 +459,16 @@ local function startFlight()
 	flightVelocity.Parent = root
 
 	flightOrientation = Instance.new("AlignOrientation")
-	flightOrientation.Name = "AstravaxFlightOrientation"
+	flightOrientation.Name = "AstravexFlightOrientation"
 	flightOrientation.Attachment0 = flightAttachment
 	flightOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
 	flightOrientation.MaxTorque = math.huge
 	flightOrientation.Responsiveness = 25
 	flightOrientation.Parent = root
 
-	flyButton.Text = "HERO FLY: ON"
-	flyButton.BackgroundColor3 = Color3.fromRGB(80, 35, 160)
-	status.Text = "SUPERMAN FLIGHT • FREE FLY"
+	flyButton.Text = "Void Flight: ON"
+	flyButton.BackgroundColor3 = VOID
+	status.Text = "VOID FLIGHT • FREE FLY"
 
 	local currentVelocity = Vector3.zero
 
@@ -643,23 +484,15 @@ local function startFlight()
 		end
 
 		local direction = Vector3.zero
---================================================
--- DEFAULT ROBLOX MOBILE JOYSTICK
--- LEFT / RIGHT / FORWARD / BACK
---================================================
 
-local moveDirection = humanoid.MoveDirection
+		-- DEFAULT ROBLOX MOBILE JOYSTICK
+		local moveDirection = humanoid.MoveDirection
 
-if moveDirection.Magnitude > 0.01 then
-	-- Use the joystick's movement direction directly.
-	-- This gives LEFT + RIGHT + FORWARD + BACK.
-	direction += moveDirection
-end
+		if moveDirection.Magnitude > 0.01 then
+			direction += moveDirection
+		end
 
-		--================================================
-		-- PC W/A/S/D
-		--================================================
-
+		-- PC CONTROLS
 		if UserInputService:IsKeyDown(Enum.KeyCode.W) then
 			direction += camera.CFrame.LookVector
 		end
@@ -676,11 +509,7 @@ end
 			direction += camera.CFrame.RightVector
 		end
 
-		--================================================
 		-- UP
-		-- Mobile jump button OR PC Space
-		--================================================
-
 		if jumpRequested
 			or UserInputService:IsKeyDown(Enum.KeyCode.Space) then
 
@@ -688,18 +517,10 @@ end
 			jumpRequested = false
 		end
 
-		--================================================
 		-- DOWN
-		-- PC LeftControl
-		--================================================
-
 		if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
 			direction -= Vector3.new(0, 1, 0)
 		end
-
-		--================================================
-		-- NORMALIZE
-		--================================================
 
 		if direction.Magnitude > 0.01 then
 			direction = direction.Unit
@@ -713,10 +534,6 @@ end
 		)
 
 		flightVelocity.VectorVelocity = currentVelocity
-
-		--================================================
-		-- SUPERMAN FACING
-		--================================================
 
 		local lookDirection = direction
 
@@ -729,18 +546,18 @@ end
 			root.Position + lookDirection
 		)
 
-		--================================================
-		-- AFTERIMAGE
-		--================================================
-
 		if effectsEnabled
-			and direction.Magnitude > 0
+			and direction.Magnitude > 0.01
 			and math.random() < 0.25 then
 
 			createAfterimage()
 		end
 	end)
 end
+
+--========================================================
+-- STOP VOID FLIGHT
+--========================================================
 
 local function stopFlight()
 	if not flying then
@@ -757,7 +574,6 @@ local function stopFlight()
 
 	local crashPosition = root and root.Position
 
-	-- Find floor for crash effect
 	if root then
 		local params = RaycastParams.new()
 
@@ -801,29 +617,27 @@ local function stopFlight()
 		root.AssemblyLinearVelocity = Vector3.zero
 	end
 
-	-- HUGE SKY CRASH
 	if crashPosition then
 		createCrash(crashPosition)
 	end
 
-	flyButton.Text = "HERO FLY: OFF"
+	flyButton.Text = "Void Flight"
 	flyButton.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
 
 	status.Text = running
-		and "NAOYA RUN • 190 SPEED"
+		and "VOID EMPEROR • 190 SPEED"
 		or "READY"
 end
 
-
 --========================================================
--- BUTTONS
+-- BUTTON EVENTS
 --========================================================
 
-runButton.MouseButton1Click:Connect(function()
+runButton.Activated:Connect(function()
 	setRun(not running)
 end)
 
-flyButton.MouseButton1Click:Connect(function()
+flyButton.Activated:Connect(function()
 	if flying then
 		stopFlight()
 	else
@@ -831,14 +645,14 @@ flyButton.MouseButton1Click:Connect(function()
 	end
 end)
 
-effectsButton.MouseButton1Click:Connect(function()
+effectsButton.Activated:Connect(function()
 	effectsEnabled = not effectsEnabled
 
 	if effectsEnabled then
-		effectsButton.Text = "VOID EFFECTS: ON"
-		effectsButton.BackgroundColor3 = Color3.fromRGB(80, 35, 160)
+		effectsButton.Text = "Load Effects Of the Void: ON"
+		effectsButton.BackgroundColor3 = VOID
 	else
-		effectsButton.Text = "VOID EFFECTS: OFF"
+		effectsButton.Text = "Load Effects Of the Void: OFF"
 		effectsButton.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
 	end
 end)
@@ -859,6 +673,7 @@ player.CharacterAdded:Connect(function(char)
 	end
 
 	flying = false
+	jumpRequested = false
 
 	setupCharacter(char)
 
@@ -866,10 +681,10 @@ player.CharacterAdded:Connect(function(char)
 		humanoid.WalkSpeed = RUN_SPEED
 	end
 
-	flyButton.Text = "HERO FLY: OFF"
+	flyButton.Text = "Void Flight"
 	flyButton.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
 
 	status.Text = running
-		and "NAOYA RUN • 190 SPEED"
+		and "VOID EMPEROR • 190 SPEED"
 		or "READY"
 end)
