@@ -1,7 +1,8 @@
---============================================================
+--========================================================
 -- NAVY HUB (BETA)
--- Complete Roblox Studio LocalScript
---============================================================
+-- ROBLOX STUDIO - SINGLE LOCALSCRIPT
+-- Put in StarterPlayer > StarterPlayerScripts
+--========================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -9,696 +10,343 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Debris = game:GetService("Debris")
 
-local Player = Players.LocalPlayer
+local player = Players.LocalPlayer
 
---============================================================
+--========================================================
 -- SETTINGS
---============================================================
+--========================================================
 
 local RUN_SPEED = 190
 local FLY_SPEED = 150
-local FLY_ACCELERATION = 9
-
 local AFTERIMAGE_INTERVAL = 0.16
 local AFTERIMAGE_LIFETIME = 0.9
 
 local VOID = Color3.fromRGB(90, 20, 180)
+local VOID_BRIGHT = Color3.fromRGB(175, 70, 255)
 local DARK_VOID = Color3.fromRGB(5, 0, 15)
-local VOID_BRIGHT = Color3.fromRGB(170, 70, 255)
 
---============================================================
+--========================================================
 -- CHARACTER
---============================================================
+--========================================================
 
-local Character
-local Humanoid
-local Root
+local character
+local humanoid
+local root
 
-local OriginalMotors = {}
-
-local function SetupCharacter(char)
-
-	Character = char
-	Humanoid = char:WaitForChild("Humanoid")
-	Root = char:WaitForChild("HumanoidRootPart")
-
-	OriginalMotors = {}
-
-	for _, object in ipairs(char:GetDescendants()) do
-
-		if object:IsA("Motor6D") then
-			OriginalMotors[object] = object.Transform
-		end
-
-	end
+local function getCharacter()
+	character = player.Character or player.CharacterAdded:Wait()
+	humanoid = character:WaitForChild("Humanoid")
+	root = character:WaitForChild("HumanoidRootPart")
 end
 
-SetupCharacter(Player.Character or Player.CharacterAdded:Wait())
+getCharacter()
 
-Player.CharacterAdded:Connect(function(char)
-
+player.CharacterAdded:Connect(function()
 	task.wait()
-
-	SetupCharacter(char)
-
+	getCharacter()
 end)
 
---============================================================
+--========================================================
 -- STATE
---============================================================
+--========================================================
 
-local Running = false
-local Flying = false
+local running = false
+local flying = false
 
-local RunConnection
-local FlyConnection
+local runConnection = nil
+local flyConnection = nil
 
-local FlightAttachment
-local FlightVelocity
-local FlightOrientation
+local flightAttachment = nil
+local flightVelocity = nil
+local flightOrientation = nil
 
---============================================================
+--========================================================
 -- UI
---============================================================
+--========================================================
 
-local GUI = Instance.new("ScreenGui")
+local gui = Instance.new("ScreenGui")
+gui.Name = "NavyHubBeta"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Parent = player:WaitForChild("PlayerGui")
 
-GUI.Name = "NavyHubBeta"
-GUI.ResetOnSpawn = false
-GUI.IgnoreGuiInset = true
-GUI.Parent = Player:WaitForChild("PlayerGui")
+local main = Instance.new("Frame")
+main.Name = "Main"
+main.Size = UDim2.fromOffset(280, 225)
+main.Position = UDim2.new(0.5, -140, 0.55, -112)
+main.BackgroundColor3 = Color3.fromRGB(8, 8, 18)
+main.BorderSizePixel = 0
+main.Active = true
+main.Parent = gui
 
-local Main = Instance.new("Frame")
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 16)
+corner.Parent = main
 
-Main.Name = "NavyHub"
-Main.Size = UDim2.fromOffset(280, 225)
-Main.Position = UDim2.new(0.5, -140, 0.55, -112)
+local stroke = Instance.new("UIStroke")
+stroke.Color = VOID
+stroke.Thickness = 2
+stroke.Parent = main
 
-Main.BackgroundColor3 = Color3.fromRGB(8, 8, 18)
-Main.BorderSizePixel = 0
-Main.Active = true
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -20, 0, 35)
+title.Position = UDim2.fromOffset(10, 5)
+title.BackgroundTransparency = 1
+title.Text = "Navy Hub (Beta)"
+title.TextColor3 = Color3.fromRGB(240, 235, 255)
+title.TextSize = 20
+title.Font = Enum.Font.GothamBold
+title.Parent = main
 
-Main.Parent = GUI
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(1, -20, 0, 20)
+status.Position = UDim2.fromOffset(10, 39)
+status.BackgroundTransparency = 1
+status.Text = "READY"
+status.TextColor3 = Color3.fromRGB(160, 150, 180)
+status.TextSize = 12
+status.Font = Enum.Font.GothamMedium
+status.Parent = main
 
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 16)
-Corner.Parent = Main
-
-local Stroke = Instance.new("UIStroke")
-Stroke.Color = VOID
-Stroke.Thickness = 2
-Stroke.Parent = Main
-
---============================================================
--- TITLE
---============================================================
-
-local Title = Instance.new("TextLabel")
-
-Title.Size = UDim2.new(1, -20, 0, 35)
-Title.Position = UDim2.fromOffset(10, 5)
-
-Title.BackgroundTransparency = 1
-
-Title.Text = "Navy Hub (Beta)"
-Title.TextColor3 = Color3.fromRGB(240, 235, 255)
-Title.TextSize = 20
-Title.Font = Enum.Font.GothamBold
-
-Title.Parent = Main
-
-local Status = Instance.new("TextLabel")
-
-Status.Size = UDim2.new(1, -20, 0, 20)
-Status.Position = UDim2.fromOffset(10, 39)
-
-Status.BackgroundTransparency = 1
-
-Status.Text = "READY"
-Status.TextColor3 = Color3.fromRGB(160, 150, 180)
-Status.TextSize = 12
-Status.Font = Enum.Font.GothamMedium
-
-Status.Parent = Main
-
---============================================================
+--========================================================
 -- INFINITE RUN BAR
---============================================================
+--========================================================
 
-local BarBack = Instance.new("Frame")
+local barBack = Instance.new("Frame")
+barBack.Size = UDim2.new(1, -30, 0, 14)
+barBack.Position = UDim2.fromOffset(15, 64)
+barBack.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+barBack.BorderSizePixel = 0
+barBack.Parent = main
 
-BarBack.Size = UDim2.new(1, -30, 0, 14)
-BarBack.Position = UDim2.fromOffset(15, 64)
+local barBackCorner = Instance.new("UICorner")
+barBackCorner.CornerRadius = UDim.new(1, 0)
+barBackCorner.Parent = barBack
 
-BarBack.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
-BarBack.BorderSizePixel = 0
+local bar = Instance.new("Frame")
+bar.Size = UDim2.fromScale(1, 1)
+bar.BackgroundColor3 = VOID
+bar.BorderSizePixel = 0
+bar.Parent = barBack
 
-BarBack.Parent = Main
+local barCorner = Instance.new("UICorner")
+barCorner.CornerRadius = UDim.new(1, 0)
+barCorner.Parent = bar
 
-local BarCorner = Instance.new("UICorner")
-BarCorner.CornerRadius = UDim.new(1, 0)
-BarCorner.Parent = BarBack
+local barText = Instance.new("TextLabel")
+barText.Size = UDim2.fromScale(1, 1)
+barText.BackgroundTransparency = 1
+barText.Text = "∞  INFINITE"
+barText.TextColor3 = Color3.new(1, 1, 1)
+barText.TextSize = 9
+barText.Font = Enum.Font.GothamBold
+barText.Parent = barBack
 
-local Bar = Instance.new("Frame")
-
-Bar.Size = UDim2.fromScale(1, 1)
-
-Bar.BackgroundColor3 = VOID
-Bar.BorderSizePixel = 0
-
-Bar.Parent = BarBack
-
-local BarFillCorner = Instance.new("UICorner")
-BarFillCorner.CornerRadius = UDim.new(1, 0)
-BarFillCorner.Parent = Bar
-
-local BarText = Instance.new("TextLabel")
-
-BarText.Size = UDim2.fromScale(1, 1)
-
-BarText.BackgroundTransparency = 1
-
-BarText.Text = "∞  INFINITE"
-BarText.TextColor3 = Color3.new(1, 1, 1)
-BarText.TextSize = 9
-BarText.Font = Enum.Font.GothamBold
-
-BarText.Parent = BarBack
-
---============================================================
+--========================================================
 -- BUTTON CREATOR
---============================================================
+--========================================================
 
-local function CreateButton(text, y)
+local function makeButton(text, y)
+	local button = Instance.new("TextButton")
 
-	local Button = Instance.new("TextButton")
+	button.Size = UDim2.new(1, -30, 0, 43)
+	button.Position = UDim2.fromOffset(15, y)
 
-	Button.Size = UDim2.new(1, -30, 0, 43)
-	Button.Position = UDim2.fromOffset(15, y)
+	button.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+	button.BorderSizePixel = 0
 
-	Button.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
-	Button.BorderSizePixel = 0
+	button.Text = text
+	button.TextColor3 = Color3.fromRGB(235, 235, 245)
+	button.TextSize = 14
+	button.Font = Enum.Font.GothamBold
 
-	Button.Text = text
-	Button.TextColor3 = Color3.fromRGB(235, 235, 245)
-	Button.TextSize = 14
-	Button.Font = Enum.Font.GothamBold
+	button.AutoButtonColor = false
+	button.Parent = main
 
-	Button.AutoButtonColor = false
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 10)
+	c.Parent = button
 
-	Button.Parent = Main
-
-	local ButtonCorner = Instance.new("UICorner")
-
-	ButtonCorner.CornerRadius = UDim.new(0, 10)
-	ButtonCorner.Parent = Button
-
-	return Button
+	return button
 end
 
-local RunButton = CreateButton("NAOYA RUN: OFF", 88)
-local FlyButton = CreateButton("HERO FLY: OFF", 140)
+local runButton = makeButton("NAOYA RUN: OFF", 88)
+local flyButton = makeButton("HERO FLY: OFF", 140)
 
---============================================================
--- DRAG UI
---============================================================
+--========================================================
+-- DRAGGABLE UI
+--========================================================
 
-local Dragging = false
-local DragStart
-local StartPosition
+local dragging = false
+local dragStart = nil
+local startPosition = nil
 
-Main.InputBegan:Connect(function(input)
-
+main.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1
 		or input.UserInputType == Enum.UserInputType.Touch then
 
-		Dragging = true
-		DragStart = input.Position
-		StartPosition = Main.Position
-
-		input.Changed:Connect(function()
-
-			if input.UserInputState == Enum.UserInputState.End then
-				Dragging = false
-			end
-
-		end)
+		dragging = true
+		dragStart = input.Position
+		startPosition = main.Position
 	end
+end)
 
+main.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+
+		dragging = false
+	end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-
-	if not Dragging then
+	if not dragging then
 		return
 	end
 
 	if input.UserInputType == Enum.UserInputType.MouseMovement
 		or input.UserInputType == Enum.UserInputType.Touch then
 
-		local Delta = input.Position - DragStart
+		local delta = input.Position - dragStart
 
-		Main.Position = UDim2.new(
-			StartPosition.X.Scale,
-			StartPosition.X.Offset + Delta.X,
-			StartPosition.Y.Scale,
-			StartPosition.Y.Offset + Delta.Y
+		main.Position = UDim2.new(
+			startPosition.X.Scale,
+			startPosition.X.Offset + delta.X,
+			startPosition.Y.Scale,
+			startPosition.Y.Offset + delta.Y
 		)
 	end
-
 end)
 
---============================================================
--- VOID PARTICLE
---============================================================
+--========================================================
+-- AFTERIMAGE
+--========================================================
 
-local function CreateVoidParticle(position, velocity)
+local function createAfterimage()
+	if not character then
+		return
+	end
 
-	local Particle = Instance.new("Part")
+	local folder = Instance.new("Folder")
+	folder.Name = "NavyAfterimage"
+	folder.Parent = workspace
 
-	Particle.Shape = Enum.PartType.Ball
-	Particle.Size = Vector3.new(0.12, 0.12, 0.12)
+	for _, object in ipairs(character:GetDescendants()) do
+		if object:IsA("BasePart")
+			and object.Name ~= "HumanoidRootPart"
+			and object.Transparency < 1 then
 
-	Particle.Position = position
+			local ghost = Instance.new("Part")
 
-	Particle.Anchored = true
-	Particle.CanCollide = false
-	Particle.CanTouch = false
-	Particle.CanQuery = false
+			ghost.Name = "VoidAfterimage"
+			ghost.Size = object.Size
+			ghost.CFrame = object.CFrame
 
-	Particle.Material = Enum.Material.Neon
-	Particle.Color = VOID
+			ghost.Anchored = true
+			ghost.CanCollide = false
+			ghost.CanTouch = false
+			ghost.CanQuery = false
 
-	Particle.Parent = workspace
+			ghost.Material = Enum.Material.Neon
+			ghost.Color = VOID
+			ghost.Transparency = 0.45
 
-	TweenService:Create(
-		Particle,
-		TweenInfo.new(0.7),
-		{
-			Position = position + velocity,
-			Transparency = 1,
-			Size = Vector3.new(0.01, 0.01, 0.01)
-		}
-	):Play()
+			ghost.Parent = folder
 
-	Debris:AddItem(Particle, 0.8)
-
-end
-
---============================================================
--- SMALL VOID DUST DEVIL
---============================================================
-
-local function CreateDustDevil(position)
-
-	local Folder = Instance.new("Folder")
-
-	Folder.Name = "NavyVoidDustDevil"
-	Folder.Parent = workspace
-
-	for i = 1, 12 do
-
-		local Angle = (i / 12) * math.pi * 2
-		local Radius = 0.3 + i * 0.1
-
-		local Particle = Instance.new("Part")
-
-		Particle.Shape = Enum.PartType.Ball
-		Particle.Size = Vector3.new(0.16, 0.16, 0.16)
-
-		Particle.Position =
-			position
-			+ Vector3.new(
-				math.cos(Angle) * Radius,
-				(i - 6) * 0.13,
-				math.sin(Angle) * Radius
+			local tween = TweenService:Create(
+				ghost,
+				TweenInfo.new(AFTERIMAGE_LIFETIME),
+				{
+					Transparency = 1
+				}
 			)
 
-		Particle.Anchored = true
-		Particle.CanCollide = false
-		Particle.CanTouch = false
-		Particle.CanQuery = false
+			tween:Play()
+		end
+	end
 
-		Particle.Material = Enum.Material.Neon
-		Particle.Color = VOID
+	Debris:AddItem(folder, AFTERIMAGE_LIFETIME + 0.1)
+end
 
-		Particle.Parent = Folder
+--========================================================
+-- DUST DEVIL
+--========================================================
+
+local function createDustDevil(position)
+	local folder = Instance.new("Folder")
+	folder.Name = "VoidDustDevil"
+	folder.Parent = workspace
+
+	for i = 1, 12 do
+		local angle = (i / 12) * math.pi * 2
+		local radius = 0.25 + i * 0.12
+
+		local p = Instance.new("Part")
+
+		p.Shape = Enum.PartType.Ball
+		p.Size = Vector3.new(0.16, 0.16, 0.16)
+
+		p.Position = position + Vector3.new(
+			math.cos(angle) * radius,
+			(i - 6) * 0.12,
+			math.sin(angle) * radius
+		)
+
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanTouch = false
+		p.CanQuery = false
+
+		p.Material = Enum.Material.Neon
+		p.Color = VOID
+		p.Parent = folder
 
 		TweenService:Create(
-			Particle,
+			p,
 			TweenInfo.new(AFTERIMAGE_LIFETIME),
 			{
 				Transparency = 1,
 				Size = Vector3.new(0.01, 0.01, 0.01)
 			}
 		):Play()
-
 	end
 
-	Debris:AddItem(
-		Folder,
-		AFTERIMAGE_LIFETIME + 0.1
-	)
-
+	Debris:AddItem(folder, AFTERIMAGE_LIFETIME + 0.1)
 end
 
---============================================================
--- AFTERIMAGE
---============================================================
+--========================================================
+-- HUGE CRASH
+--========================================================
+
+local function skyCrash(position)
+	local folder = Instance.new("Folder")
+	folder.Name = "NavySkyCrash"
+	folder.Parent = workspace
+
+	-- 100x giant core
+	local core = Instance.new("Part")
+	core.Shape = Enum.PartType.Ball
+	core.Size = Vector3.new(100, 100, 100)
+	core.Position = position
+
+	core.Anchored = true
+	core.CanCollide = false
+	core.CanTouch = false
+	core.CanQuery = false
+
+	core.Material = Enum.Material.Neon
+	core.Color = DARK_VOID
+	core.Transparency = 0.1
+	core.Parent = folder
+
+	local light = Instance.new("PointLight")
+	light.Color = VOID_BRIGHT
+	light.Brightness = 100
+	light.Range = 250
+	light.Parent = core
 
-local function CreateAfterimage()
-
-	if not Character or not Root then
-		return
-	end
-
-	local Folder = Instance.new("Folder")
-
-	Folder.Name = "NavyVoidAfterimage"
-	Folder.Parent = workspace
-
-	for _, Part in ipairs(Character:GetDescendants()) do
-
-		if Part:IsA("BasePart")
-			and Part.Transparency < 1
-			and Part.Name ~= "HumanoidRootPart" then
-
-			local Ghost = Instance.new("Part")
-
-			Ghost.Size = Part.Size
-			Ghost.CFrame = Part.CFrame
-
-			Ghost.Anchored = true
-
-			Ghost.CanCollide = false
-			Ghost.CanTouch = false
-			Ghost.CanQuery = false
-
-			Ghost.Material = Enum.Material.Neon
-			Ghost.Color = VOID
-			Ghost.Transparency = 0.45
-
-			Ghost.Parent = Folder
-
-			TweenService:Create(
-				Ghost,
-				TweenInfo.new(AFTERIMAGE_LIFETIME),
-				{
-					Transparency = 1
-				}
-			):Play()
-
-		end
-
-	end
-
-	CreateDustDevil(
-		Root.Position
-	)
-
-	Debris:AddItem(
-		Folder,
-		AFTERIMAGE_LIFETIME + 0.1
-	)
-
-end
-
---============================================================
--- MOTOR FINDER
---============================================================
-
-local function FindMotor(names)
-
-	if not Character then
-		return nil
-	end
-
-	for _, name in ipairs(names) do
-
-		for _, object in ipairs(Character:GetDescendants()) do
-
-			if object:IsA("Motor6D")
-				and object.Name == name then
-
-				return object
-			end
-
-		end
-
-	end
-
-	return nil
-end
-
---============================================================
--- SUPERMAN ANIMATION
---============================================================
-
-local function SupermanPose(moving)
-
-	if not Character then
-		return
-	end
-
-	local Time = os.clock()
-
-	local RootJoint =
-		FindMotor({"RootJoint", "Root"})
-
-	local Waist =
-		FindMotor({"Waist"})
-
-	local LeftShoulder =
-		FindMotor({
-			"Left Shoulder",
-			"LeftShoulder"
-		})
-
-	local RightShoulder =
-		FindMotor({
-			"Right Shoulder",
-			"RightShoulder"
-		})
-
-	local LeftHip =
-		FindMotor({
-			"Left Hip",
-			"LeftHip"
-		})
-
-	local RightHip =
-		FindMotor({
-			"Right Hip",
-			"RightHip"
-		})
-
-	local Wobble =
-		math.sin(Time * 3.2) * math.rad(3)
-
-	if moving then
-
-		-- BODY
-		if RootJoint then
-
-			RootJoint.Transform =
-				CFrame.Angles(
-					math.rad(-18),
-					0,
-					Wobble
-				)
-
-		end
-
-		if Waist then
-
-			Waist.Transform =
-				CFrame.Angles(
-					math.rad(-12),
-					0,
-					-Wobble
-				)
-
-		end
-
-		-- ARMS FORWARD
-		if LeftShoulder then
-
-			LeftShoulder.Transform =
-				CFrame.Angles(
-					math.rad(-75),
-					0,
-					math.rad(-10)
-				)
-
-		end
-
-		if RightShoulder then
-
-			RightShoulder.Transform =
-				CFrame.Angles(
-					math.rad(-75),
-					0,
-					math.rad(10)
-				)
-
-		end
-
-		-- LEGS BACK
-		if LeftHip then
-
-			LeftHip.Transform =
-				CFrame.Angles(
-					math.rad(35),
-					0,
-					math.rad(-4)
-				)
-
-		end
-
-		if RightHip then
-
-			RightHip.Transform =
-				CFrame.Angles(
-					math.rad(35),
-					0,
-					math.rad(4)
-				)
-
-		end
-
-	else
-
-		-- HOVER IDLE
-
-		if RootJoint then
-
-			RootJoint.Transform =
-				CFrame.Angles(
-					math.rad(-8) + Wobble,
-					0,
-					math.rad(2)
-				)
-
-		end
-
-		if Waist then
-
-			Waist.Transform =
-				CFrame.Angles(
-					math.rad(-5),
-					0,
-					0
-				)
-
-		end
-
-		-- ARMS
-		if LeftShoulder then
-
-			LeftShoulder.Transform =
-				CFrame.Angles(
-					math.rad(-60),
-					0,
-					math.rad(-12)
-				)
-
-		end
-
-		if RightShoulder then
-
-			RightShoulder.Transform =
-				CFrame.Angles(
-					math.rad(-60),
-					0,
-					math.rad(12)
-				)
-
-		end
-
-		-- LEFT FOOT SLIGHTLY UP
-		if LeftHip then
-
-			LeftHip.Transform =
-				CFrame.Angles(
-					math.rad(18),
-					0,
-					math.rad(-6)
-				)
-
-		end
-
-		if RightHip then
-
-			RightHip.Transform =
-				CFrame.Angles(
-					math.rad(-6),
-					0,
-					math.rad(3)
-				)
-
-		end
-
-	end
-
-end
-
---============================================================
--- RESET POSE
---============================================================
-
-local function ResetPose()
-
-	for Motor, Transform in pairs(OriginalMotors) do
-
-		if Motor and Motor.Parent then
-			Motor.Transform = Transform
-		end
-
-	end
-
-end
-
---============================================================
--- MASSIVE SKY CRASH
---============================================================
-
-local function SkyCrash(position)
-
-	local Folder = Instance.new("Folder")
-
-	Folder.Name = "NavyMassiveSkyCrash"
-	Folder.Parent = workspace
-
-	-- MASSIVE CORE
-	local Core = Instance.new("Part")
-
-	Core.Shape = Enum.PartType.Ball
-	Core.Size = Vector3.new(100, 100, 100)
-
-	Core.Position = position
-
-	Core.Anchored = true
-	Core.CanCollide = false
-	Core.CanTouch = false
-	Core.CanQuery = false
-
-	Core.Material = Enum.Material.Neon
-	Core.Color = DARK_VOID
-	Core.Transparency = 0.12
-
-	Core.Parent = Folder
-
-	local Light = Instance.new("PointLight")
-
-	Light.Color = VOID
-	Light.Brightness = 100
-	Light.Range = 250
-
-	Light.Parent = Core
-
-	-- CORE EXPLOSION
 	TweenService:Create(
-		Core,
+		core,
 		TweenInfo.new(
 			1.2,
 			Enum.EasingStyle.Exponential,
@@ -710,443 +358,573 @@ local function SkyCrash(position)
 		}
 	):Play()
 
-	--========================================================
-	-- FIRST MASSIVE SHOCKWAVE
-	--========================================================
+	-- shockwave
+	local ring = Instance.new("Part")
+	ring.Shape = Enum.PartType.Cylinder
+	ring.Size = Vector3.new(2, 100, 100)
 
-	local Ring = Instance.new("Part")
-
-	Ring.Shape = Enum.PartType.Cylinder
-	Ring.Size = Vector3.new(2, 100, 100)
-
-	Ring.CFrame =
+	ring.CFrame =
 		CFrame.new(position)
-		* CFrame.Angles(
-			0,
-			0,
-			math.rad(90)
-		)
+		* CFrame.Angles(0, 0, math.rad(90))
 
-	Ring.Anchored = true
-	Ring.CanCollide = false
-	Ring.CanTouch = false
-	Ring.CanQuery = false
+	ring.Anchored = true
+	ring.CanCollide = false
+	ring.CanTouch = false
+	ring.CanQuery = false
 
-	Ring.Material = Enum.Material.Neon
-	Ring.Color = VOID
-	Ring.Transparency = 0.1
-
-	Ring.Parent = Folder
+	ring.Material = Enum.Material.Neon
+	ring.Color = VOID_BRIGHT
+	ring.Transparency = 0.1
+	ring.Parent = folder
 
 	TweenService:Create(
-		Ring,
+		ring,
 		TweenInfo.new(
 			1.4,
 			Enum.EasingStyle.Exponential,
 			Enum.EasingDirection.Out
 		),
 		{
-			Size = Vector3.new(
-				2,
-				1200,
-				1200
-			),
+			Size = Vector3.new(2, 1200, 1200),
 			Transparency = 1
 		}
 	):Play()
 
-	--========================================================
-	-- SECOND SHOCKWAVE
-	--========================================================
-
+	-- second ring
 	task.delay(0.12, function()
+		if not folder.Parent then
+			return
+		end
 
-		local Ring2 = Instance.new("Part")
+		local ring2 = Instance.new("Part")
 
-		Ring2.Shape = Enum.PartType.Cylinder
-		Ring2.Size = Vector3.new(3, 60, 60)
+		ring2.Shape = Enum.PartType.Cylinder
+		ring2.Size = Vector3.new(3, 60, 60)
 
-		Ring2.CFrame =
+		ring2.CFrame =
 			CFrame.new(position)
-			* CFrame.Angles(
-				0,
-				0,
-				math.rad(90)
-			)
+			* CFrame.Angles(0, 0, math.rad(90))
 
-		Ring2.Anchored = true
-		Ring2.CanCollide = false
-		Ring2.CanTouch = false
-		Ring2.CanQuery = false
+		ring2.Anchored = true
+		ring2.CanCollide = false
+		ring2.CanTouch = false
+		ring2.CanQuery = false
 
-		Ring2.Material = Enum.Material.Neon
-		Ring2.Color = VOID_BRIGHT
-		Ring2.Transparency = 0.05
-
-		Ring2.Parent = Folder
+		ring2.Material = Enum.Material.Neon
+		ring2.Color = VOID_BRIGHT
+		ring2.Transparency = 0.05
+		ring2.Parent = folder
 
 		TweenService:Create(
-			Ring2,
-			TweenInfo.new(
-				1.8,
-				Enum.EasingStyle.Exponential,
-				Enum.EasingDirection.Out
-			),
+			ring2,
+			TweenInfo.new(1.8),
 			{
-				Size = Vector3.new(
-					3,
-					1800,
-					1800
-				),
+				Size = Vector3.new(3, 1800, 1800),
 				Transparency = 1
 			}
 		):Play()
 
-		Debris:AddItem(Ring2, 2)
-
+		Debris:AddItem(ring2, 2)
 	end)
 
-	--========================================================
-	-- 150 MASSIVE VOID PARTICLES
-	--========================================================
-
+	-- giant particles
 	for i = 1, 150 do
+		local particle = Instance.new("Part")
 
-		local Particle = Instance.new("Part")
+		particle.Shape = Enum.PartType.Ball
 
-		Particle.Shape = Enum.PartType.Ball
+		local size = math.random(5, 15)
 
-		local Size =
-			math.random(5, 15)
+		particle.Size = Vector3.new(size, size, size)
+		particle.Position = position
 
-		Particle.Size =
-			Vector3.new(
-				Size,
-				Size,
-				Size
-			)
+		particle.Anchored = true
+		particle.CanCollide = false
+		particle.CanTouch = false
+		particle.CanQuery = false
 
-		Particle.Position = position
-
-		Particle.Anchored = true
-
-		Particle.CanCollide = false
-		Particle.CanTouch = false
-		Particle.CanQuery = false
-
-		Particle.Material = Enum.Material.Neon
+		particle.Material = Enum.Material.Neon
 
 		if i % 3 == 0 then
-			Particle.Color = VOID_BRIGHT
+			particle.Color = VOID_BRIGHT
 		else
-			Particle.Color = VOID
+			particle.Color = VOID
 		end
 
-		Particle.Parent = Folder
+		particle.Parent = folder
 
-		local Angle =
-			math.random() * math.pi * 2
+		local angle = math.random() * math.pi * 2
+		local distance = math.random(100, 500)
+		local height = math.random(-60, 120)
 
-		local Distance =
-			math.random(100, 500)
-
-		local Height =
-			math.random(-60, 120)
-
-		local Destination =
-			position
-			+ Vector3.new(
-				math.cos(Angle) * Distance,
-				Height,
-				math.sin(Angle) * Distance
-			)
+		local destination = position + Vector3.new(
+			math.cos(angle) * distance,
+			height,
+			math.sin(angle) * distance
+		)
 
 		TweenService:Create(
-			Particle,
+			particle,
 			TweenInfo.new(
 				math.random(70, 130) / 100,
 				Enum.EasingStyle.Exponential,
 				Enum.EasingDirection.Out
 			),
 			{
-				Position = Destination,
+				Position = destination,
 				Transparency = 1,
 				Size = Vector3.new(1, 1, 1)
 			}
 		):Play()
-
 	end
-
-	--========================================================
-	-- LIGHT FLASH
-	--========================================================
 
 	task.spawn(function()
+		for _ = 1, 8 do
+			if light.Parent then
+				light.Brightness = 150
+				task.wait(0.04)
 
-		for i = 1, 8 do
-
-			Light.Brightness = 150
-
-			task.wait(0.04)
-
-			Light.Brightness = 25
-
-			task.wait(0.04)
-
+				light.Brightness = 25
+				task.wait(0.04)
+			end
 		end
-
-		Light.Brightness = 0
-
 	end)
 
-	Debris:AddItem(Folder, 2.5)
-
+	Debris:AddItem(folder, 2.5)
 end
 
---============================================================
--- CREATE FLIGHT
---============================================================
+--========================================================
+-- FLIGHT
+--========================================================
 
-local function CreateFlightController()
-
-	if FlightVelocity then
-		FlightVelocity:Destroy()
+local function createFlight()
+	if not root then
+		return false
 	end
 
-	if FlightOrientation then
-		FlightOrientation:Destroy()
+	if flightVelocity then
+		flightVelocity:Destroy()
+		flightVelocity = nil
 	end
 
-	FlightAttachment = Instance.new("Attachment")
+	if flightOrientation then
+		flightOrientation:Destroy()
+		flightOrientation = nil
+	end
 
-	FlightAttachment.Name =
-		"NavyFlightAttachment"
+	if flightAttachment then
+		flightAttachment:Destroy()
+		flightAttachment = nil
+	end
 
-	FlightAttachment.Parent = Root
+	flightAttachment = Instance.new("Attachment")
+	flightAttachment.Name = "NavyFlightAttachment"
+	flightAttachment.Parent = root
 
-	-- FREE 3D MOVEMENT
-	FlightVelocity = Instance.new("LinearVelocity")
+	flightVelocity = Instance.new("LinearVelocity")
+	flightVelocity.Name = "NavyFlightVelocity"
+	flightVelocity.Attachment0 = flightAttachment
+	flightVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
+	flightVelocity.MaxForce = math.huge
+	flightVelocity.VectorVelocity = Vector3.zero
+	flightVelocity.Parent = root
 
-	FlightVelocity.Name =
-		"NavyFlightVelocity"
+	flightOrientation = Instance.new("AlignOrientation")
+	flightOrientation.Name = "NavyFlightOrientation"
+	flightOrientation.Attachment0 = flightAttachment
+	flightOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
+	flightOrientation.MaxTorque = math.huge
+	flightOrientation.MaxAngularVelocity = math.huge
+	flightOrientation.Responsiveness = 35
+	flightOrientation.Parent = root
 
-	FlightVelocity.Attachment0 =
-		FlightAttachment
-
-	FlightVelocity.RelativeTo =
-		Enum.ActuatorRelativeTo.World
-
-	FlightVelocity.MaxForce =
-		math.huge
-
-	FlightVelocity.VectorVelocity =
-		Vector3.zero
-
-	FlightVelocity.Parent = Root
-
-	-- CHARACTER ROTATION
-	FlightOrientation =
-		Instance.new("AlignOrientation")
-
-	FlightOrientation.Name =
-		"NavyFlightOrientation"
-
-	FlightOrientation.Attachment0 =
-		FlightAttachment
-
-	FlightOrientation.Mode =
-		Enum.OrientationAlignmentMode.OneAttachment
-
-	FlightOrientation.MaxTorque =
-		math.huge
-
-	FlightOrientation.MaxAngularVelocity =
-		math.huge
-
-	FlightOrientation.Responsiveness =
-		35
-
-	FlightOrientation.Parent = Root
-
+	return true
 end
 
---============================================================
--- ENABLE RUN
---============================================================
+--========================================================
+-- FLIGHT POSE
+--========================================================
 
-local function EnableRun()
-
-	Running = true
-
-	Humanoid.WalkSpeed =
-		RUN_SPEED
-
-	RunButton.Text =
-		"NAOYA RUN: ON"
-
-	RunButton.BackgroundColor3 =
-		Color3.fromRGB(80, 35, 160)
-
-	Status.Text =
-		"NAOYA RUN • 190 SPEED"
-
-	if RunConnection then
-		RunConnection:Disconnect()
+local function setFlightPose(moving)
+	if not character then
+		return
 	end
 
-	local LastAfterimage = 0
+	local torso = character:FindFirstChild("UpperTorso")
+		or character:FindFirstChild("Torso")
 
-	RunConnection =
-		RunService.RenderStepped:Connect(function()
+	if not torso then
+		return
+	end
 
-			if not Running then
-				return
+	local time = os.clock()
+	local wobble = math.sin(time * 3) * math.rad(3)
+
+	local function findMotor(name)
+		return torso:FindFirstChild(name)
+			or character:FindFirstChild(name, true)
+	end
+
+	local leftShoulder =
+		findMotor("Left Shoulder")
+		or findMotor("LeftShoulder")
+
+	local rightShoulder =
+		findMotor("Right Shoulder")
+		or findMotor("RightShoulder")
+
+	local leftHip =
+		findMotor("Left Hip")
+		or findMotor("LeftHip")
+
+	local rightHip =
+		findMotor("Right Hip")
+		or findMotor("RightHip")
+
+	if leftShoulder then
+		leftShoulder.Transform =
+			CFrame.Angles(
+				math.rad(moving and -75 or -60),
+				0,
+				math.rad(-10) + wobble
+			)
+	end
+
+	if rightShoulder then
+		rightShoulder.Transform =
+			CFrame.Angles(
+				math.rad(moving and -75 or -60),
+				0,
+				math.rad(10) - wobble
+			)
+	end
+
+	if leftHip then
+		leftHip.Transform =
+			CFrame.Angles(
+				math.rad(moving and 35 or 18),
+				0,
+				math.rad(-5)
+			)
+	end
+
+	if rightHip then
+		rightHip.Transform =
+			CFrame.Angles(
+				math.rad(moving and 35 or -6),
+				0,
+				math.rad(4)
+			)
+	end
+end
+
+--========================================================
+-- RUN
+--========================================================
+
+local function enableRun()
+	if not humanoid then
+		return
+	end
+
+	running = true
+	humanoid.WalkSpeed = RUN_SPEED
+
+	runButton.Text = "NAOYA RUN: ON"
+	runButton.BackgroundColor3 = Color3.fromRGB(80, 35, 160)
+	status.Text = "NAOYA RUN • 190 SPEED"
+
+	if runConnection then
+		runConnection:Disconnect()
+	end
+
+	local lastAfterimage = 0
+
+	runConnection = RunService.RenderStepped:Connect(function()
+		if not running then
+			return
+		end
+
+		if humanoid and not flying then
+			humanoid.WalkSpeed = RUN_SPEED
+		end
+
+		bar.Size = UDim2.fromScale(1, 1)
+
+		if os.clock() - lastAfterimage >= AFTERIMAGE_INTERVAL then
+			lastAfterimage = os.clock()
+
+			createAfterimage()
+
+			if root then
+				createDustDevil(root.Position)
 			end
-
-			if Humanoid and not Flying then
-				Humanoid.WalkSpeed =
-					RUN_SPEED
-			end
-
-			Bar.Size =
-				UDim2.fromScale(1, 1)
-
-			if os.clock() - LastAfterimage
-				>= AFTERIMAGE_INTERVAL then
-
-				LastAfterimage =
-					os.clock()
-
-				CreateAfterimage()
-
-			end
-
-		end)
-
+		end
+	end)
 end
 
---============================================================
--- DISABLE RUN
---============================================================
+local function disableRun()
+	running = false
 
-local function DisableRun()
-
-	Running = false
-
-	if RunConnection then
-
-		RunConnection:Disconnect()
-		RunConnection = nil
-
+	if runConnection then
+		runConnection:Disconnect()
+		runConnection = nil
 	end
 
-	if Humanoid and not Flying then
-		Humanoid.WalkSpeed = 16
+	if humanoid and not flying then
+		humanoid.WalkSpeed = 16
 	end
 
-	RunButton.Text =
-		"NAOYA RUN: OFF"
-
-	RunButton.BackgroundColor3 =
-		Color3.fromRGB(35, 35, 55)
-
-	Status.Text =
-		"READY"
-
+	runButton.Text = "NAOYA RUN: OFF"
+	runButton.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+	status.Text = "READY"
 end
 
---============================================================
--- ENABLE FLIGHT
---============================================================
+--========================================================
+-- FLY ON
+--========================================================
 
-local function EnableFly()
+local function enableFly()
+	if not humanoid or not root then
+		getCharacter()
+	end
 
-	Flying = true
+	if not humanoid or not root then
+		return
+	end
 
-	Humanoid.AutoRotate = false
+	if not createFlight() then
+		return
+	end
 
-	Humanoid:ChangeState(
-		Enum.HumanoidStateType.Physics
+	flying = true
+
+	humanoid.AutoRotate = false
+	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+
+	flyButton.Text = "HERO FLY: ON"
+	flyButton.BackgroundColor3 = Color3.fromRGB(80, 35, 160)
+	status.Text = "SUPERMAN FLIGHT • ON"
+
+	if flyConnection then
+		flyConnection:Disconnect()
+	end
+
+	local currentVelocity = Vector3.zero
+
+	flyConnection = RunService.RenderStepped:Connect(function(dt)
+		if not flying then
+			return
+		end
+
+		if not character or not humanoid or not root then
+			return
+		end
+
+		if not flightVelocity or not flightOrientation then
+			return
+		end
+
+		local camera = workspace.CurrentCamera
+
+		if not camera then
+			return
+		end
+
+		local direction = Vector3.zero
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+			direction += camera.CFrame.LookVector
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+			direction -= camera.CFrame.LookVector
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+			direction -= camera.CFrame.RightVector
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+			direction += camera.CFrame.RightVector
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+			direction += Vector3.yAxis
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+			direction -= Vector3.yAxis
+		end
+
+		local targetVelocity = Vector3.zero
+
+		if direction.Magnitude > 0.01 then
+			targetVelocity = direction.Unit * FLY_SPEED
+		end
+
+		currentVelocity = currentVelocity:Lerp(
+			targetVelocity,
+			math.clamp(dt * 9, 0, 1)
+		)
+
+		flightVelocity.VectorVelocity = currentVelocity
+
+		local lookDirection
+
+		if direction.Magnitude > 0.01 then
+			lookDirection = direction.Unit
+		else
+			lookDirection = camera.CFrame.LookVector
+		end
+
+		flightOrientation.CFrame =
+			CFrame.lookAt(
+				root.Position,
+				root.Position + lookDirection
+			)
+
+		setFlightPose(direction.Magnitude > 0.01)
+
+		if direction.Magnitude > 0.01 and math.random() < 0.4 then
+			createDustDevil(root.Position - lookDirection * 2)
+		end
+	end)
+end
+
+--========================================================
+-- FLY OFF + CRASH
+--========================================================
+
+local function disableFly()
+	if not flying then
+		return
+	end
+
+	flying = false
+
+	if flyConnection then
+		flyConnection:Disconnect()
+		flyConnection = nil
+	end
+
+	if not root then
+		getCharacter()
+	end
+
+	if not root then
+		return
+	end
+
+	-- Find ground
+	local crashPosition = root.Position
+
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {character}
+
+	local result = workspace:Raycast(
+		root.Position,
+		Vector3.new(0, -10000, 0),
+		params
 	)
 
-	CreateFlightController()
-
-	FlyButton.Text =
-		"HERO FLY: ON"
-
-	FlyButton.BackgroundColor3 =
-		Color3.fromRGB(80, 35, 160)
-
-	Status.Text =
-		"SUPERMAN FLIGHT • ON"
-
-	if FlyConnection then
-		FlyConnection:Disconnect()
+	if result then
+		crashPosition = result.Position
 	end
 
-	local CurrentVelocity =
-		Vector3.zero
+	-- Remove flight objects
+	if flightVelocity then
+		flightVelocity:Destroy()
+		flightVelocity = nil
+	end
 
-	FlyConnection =
-		RunService.RenderStepped:Connect(function(dt)
+	if flightOrientation then
+		flightOrientation:Destroy()
+		flightOrientation = nil
+	end
 
-			if not Flying then
-				return
-			end
+	if flightAttachment then
+		flightAttachment:Destroy()
+		flightAttachment = nil
+	end
 
-			local Camera =
-				workspace.CurrentCamera
+	root.AssemblyLinearVelocity = Vector3.zero
 
-			local Direction =
-				Vector3.zero
+	humanoid.AutoRotate = true
+	humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
 
-			-- FORWARD
-			if UserInputService:IsKeyDown(
-				Enum.KeyCode.W
-			) then
+	if running then
+		humanoid.WalkSpeed = RUN_SPEED
+	else
+		humanoid.WalkSpeed = 16
+	end
 
-				Direction +=
-					Camera.CFrame.LookVector
+	-- MASSIVE CRASH
+	skyCrash(crashPosition)
 
-			end
+	flyButton.Text = "HERO FLY: OFF"
+	flyButton.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
 
-			-- BACK
-			if UserInputService:IsKeyDown(
-				Enum.KeyCode.S
-			) then
-
-				Direction -=
-					Camera.CFrame.LookVector
-
-			end
-
-			-- LEFT
-			if UserInputService:IsKeyDown(
-				Enum.KeyCode.A
-			) then
-
-				Direction -=
-					Camera.CFrame.RightVector
-
-			end
-
-			-- RIGHT
-			if
-
--- UP
-if UserInputService:IsKeyDown(
-    Enum.KeyCode.Space
-) then
-
-    Direction += Vector3.yAxis
-
+	status.Text =
+		running
+		and "NAOYA RUN • 190 SPEED"
+		or "READY"
 end
 
--- DOWN
-if UserInputService:IsKeyDown(
-    Enum.KeyCode.LeftControl
-) then
+--========================================================
+-- BUTTONS
+--========================================================
 
-    Direction -= Vector3.yAxis
+runButton.MouseButton1Click:Connect(function()
+	if running then
+		disableRun()
+	else
+		enableRun()
+	end
+end)
 
-end
+flyButton.MouseButton1Click:Connect(function()
+	if flying then
+		disableFly()
+	else
+		enableFly()
+	end
+end)
+
+--========================================================
+-- RESPAWN SAFETY
+--========================================================
+
+player.CharacterAdded:Connect(function()
+	if flying then
+		flying = false
+	end
+
+	if runConnection then
+		runConnection:Disconnect()
+		runConnection = nil
+	end
+
+	if flyConnection then
+		flyConnection:Disconnect()
+		flyConnection = nil
+	end
+
+	task.wait()
+	getCharacter()
+
+	if running and humanoid then
+		humanoid.WalkSpeed = RUN_SPEED
+	end
+end)
+
+--========================================================
+-- DONE
+--========================================================
+
+print("================================")
+print(" NAVY HUB (BETA)")
+print(" READY")
+print(" RUN SPEED: 190")
+print(" AFTERIMA
