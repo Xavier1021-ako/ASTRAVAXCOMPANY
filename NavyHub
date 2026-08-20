@@ -1,11 +1,13 @@
+--// ASTRAVAXCOMPANY
 --// Navy Hub (Beta)
---// Naoya Run - Visual Edition
---// Roblox Studio LocalScript
---// Place in StarterPlayer > StarterPlayerScripts
+--// Naoya Run - Infinite Loop Visual
+--// Place as a LocalScript in StarterPlayer > StarterPlayerScripts
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Debris = game:GetService("Debris")
 
 local player = Players.LocalPlayer
 
@@ -14,14 +16,17 @@ local player = Players.LocalPlayer
 --==================================================
 
 local SPEED = 100
-local AFTERIMAGE_INTERVAL = 0.055
+local AFTERIMAGE_RATE = 0.06
 local AFTERIMAGE_LIFETIME = 0.35
-local DUST_DEVIL_SIZE = 3.5
+
+local VOID_COLOR = Color3.fromRGB(75, 20, 150)
+local BLACK_HOLE_COLOR = Color3.fromRGB(3, 0, 8)
 
 local running = false
 local character
 local humanoid
 local root
+local runConnection
 
 --==================================================
 -- CHARACTER
@@ -37,7 +42,17 @@ if player.Character then
 	setupCharacter(player.Character)
 end
 
-player.CharacterAdded:Connect(setupCharacter)
+player.CharacterAdded:Connect(function(char)
+	setupCharacter(char)
+
+	if running then
+		task.wait(0.25)
+
+		if humanoid then
+			humanoid.WalkSpeed = SPEED
+		end
+	end
+end)
 
 --==================================================
 -- UI
@@ -50,21 +65,21 @@ gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame")
 main.Name = "NavyHub"
-main.Size = UDim2.fromOffset(230, 145)
-main.Position = UDim2.new(0.5, -115, 0.7, -72)
+main.Size = UDim2.fromOffset(240, 155)
+main.Position = UDim2.new(0.5, -120, 0.65, -75)
 main.BackgroundColor3 = Color3.fromRGB(8, 8, 18)
 main.BorderSizePixel = 0
+main.Active = true
 main.Parent = gui
 
 local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 14)
 corner.Parent = main
 
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(100, 70, 255)
-stroke.Thickness = 2
-stroke.Transparency = 0.15
-stroke.Parent = main
+local outline = Instance.new("UIStroke")
+outline.Color = VOID_COLOR
+outline.Thickness = 2
+outline.Parent = main
 
 --==================================================
 -- TITLE
@@ -75,18 +90,32 @@ title.Size = UDim2.new(1, -20, 0, 35)
 title.Position = UDim2.fromOffset(10, 5)
 title.BackgroundTransparency = 1
 title.Text = "Navy Hub (Beta)"
-title.TextColor3 = Color3.fromRGB(220, 215, 255)
+title.TextColor3 = Color3.fromRGB(230, 225, 255)
 title.TextSize = 20
 title.Font = Enum.Font.GothamBold
 title.Parent = main
 
 --==================================================
--- RUN BAR
+-- STATUS
+--==================================================
+
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(1, -30, 0, 20)
+status.Position = UDim2.fromOffset(15, 40)
+status.BackgroundTransparency = 1
+status.Text = "NAOYA RUN • OFF"
+status.TextColor3 = Color3.fromRGB(150, 150, 170)
+status.TextSize = 12
+status.Font = Enum.Font.GothamMedium
+status.Parent = main
+
+--==================================================
+-- INFINITE RUN BAR
 --==================================================
 
 local barBack = Instance.new("Frame")
 barBack.Size = UDim2.new(1, -30, 0, 12)
-barBack.Position = UDim2.fromOffset(15, 48)
+barBack.Position = UDim2.fromOffset(15, 65)
 barBack.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
 barBack.BorderSizePixel = 0
 barBack.Parent = main
@@ -97,7 +126,7 @@ barCorner.Parent = barBack
 
 local bar = Instance.new("Frame")
 bar.Size = UDim2.fromScale(1, 1)
-bar.BackgroundColor3 = Color3.fromRGB(110, 70, 255)
+bar.BackgroundColor3 = VOID_COLOR
 bar.BorderSizePixel = 0
 bar.Parent = barBack
 
@@ -105,26 +134,27 @@ local barFillCorner = Instance.new("UICorner")
 barFillCorner.CornerRadius = UDim.new(1, 0)
 barFillCorner.Parent = bar
 
-local infiniteText = Instance.new("TextLabel")
-infiniteText.Size = UDim2.new(1, 0, 1, 0)
-infiniteText.BackgroundTransparency = 1
-infiniteText.Text = "∞  RUN"
-infiniteText.TextColor3 = Color3.fromRGB(255, 255, 255)
-infiniteText.TextSize = 10
-infiniteText.Font = Enum.Font.GothamBold
-infiniteText.Parent = barBack
+local barText = Instance.new("TextLabel")
+barText.Size = UDim2.fromScale(1, 1)
+barText.BackgroundTransparency = 1
+barText.Text = "∞  INFINITE"
+barText.TextColor3 = Color3.new(1, 1, 1)
+barText.TextSize = 9
+barText.Font = Enum.Font.GothamBold
+barText.Parent = barBack
 
 --==================================================
--- ON / OFF BUTTON
+-- TOGGLE
 --==================================================
 
 local toggle = Instance.new("TextButton")
-toggle.Size = UDim2.new(1, -30, 0, 48)
-toggle.Position = UDim2.fromOffset(15, 78)
+toggle.Size = UDim2.new(1, -30, 0, 45)
+toggle.Position = UDim2.fromOffset(15, 95)
 toggle.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+toggle.BorderSizePixel = 0
 toggle.Text = "NAOYA RUN: OFF"
 toggle.TextColor3 = Color3.fromRGB(220, 220, 235)
-toggle.TextSize = 16
+toggle.TextSize = 15
 toggle.Font = Enum.Font.GothamBold
 toggle.AutoButtonColor = false
 toggle.Parent = main
@@ -141,9 +171,9 @@ local dragging = false
 local dragStart
 local startPosition
 
-toggle.InputBegan:Connect(function(input)
+main.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1
-	or input.UserInputType == Enum.UserInputType.Touch then
+		or input.UserInputType == Enum.UserInputType.Touch then
 
 		dragging = true
 		dragStart = input.Position
@@ -157,122 +187,103 @@ toggle.InputBegan:Connect(function(input)
 	end
 end)
 
-toggle.InputChanged:Connect(function(input)
+UserInputService.InputChanged:Connect(function(input)
+	if not dragging then
+		return
+	end
+
 	if input.UserInputType == Enum.UserInputType.MouseMovement
-	or input.UserInputType == Enum.UserInputType.Touch then
+		or input.UserInputType == Enum.UserInputType.Touch then
 
-		RunService.RenderStepped:Connect(function()
-			if not dragging then
-				return
-			end
+		local delta = input.Position - dragStart
 
-			local delta = input.Position - dragStart
-
-			main.Position = UDim2.new(
-				startPosition.X.Scale,
-				startPosition.X.Offset + delta.X,
-				startPosition.Y.Scale,
-				startPosition.Y.Offset + delta.Y
-			)
-		end)
+		main.Position = UDim2.new(
+			startPosition.X.Scale,
+			startPosition.X.Offset + delta.X,
+			startPosition.Y.Scale,
+			startPosition.Y.Offset + delta.Y
+		)
 	end
 end)
 
 --==================================================
--- VOID MATERIAL
+-- VOID DUST DEVIL
 --==================================================
 
-local function makeVoidPart(part)
-	part.Material = Enum.Material.Neon
-	part.Color = Color3.fromRGB(45, 15, 90)
-	part.Transparency = 0.45
-end
-
---==================================================
--- BLACK HOLE DUST DEVIL
---==================================================
-
-local function createDustDevil(position, parent)
+local function createDustDevil(position)
 	local folder = Instance.new("Folder")
 	folder.Name = "VoidDustDevil"
-	folder.Parent = parent
+	folder.Parent = workspace
 
 	-- Black hole
 	local core = Instance.new("Part")
 	core.Shape = Enum.PartType.Ball
-	core.Size = Vector3.new(0.8, 0.8, 0.8)
+	core.Size = Vector3.new(0.65, 0.65, 0.65)
 	core.Position = position
 	core.Anchored = true
 	core.CanCollide = false
-	core.CanQuery = false
 	core.CanTouch = false
+	core.CanQuery = false
 	core.Material = Enum.Material.Neon
-	core.Color = Color3.fromRGB(5, 0, 15)
-	core.Transparency = 0.15
+	core.Color = BLACK_HOLE_COLOR
 	core.Parent = folder
 
-	-- Glow
-	local light = Instance.new("PointLight")
-	light.Color = Color3.fromRGB(110, 45, 255)
-	light.Brightness = 2
-	light.Range = 7
-	light.Parent = core
+	local glow = Instance.new("PointLight")
+	glow.Color = VOID_COLOR
+	glow.Brightness = 2
+	glow.Range = 6
+	glow.Parent = core
 
-	-- Dust devil spiral
-	for i = 1, 7 do
-		local angle = (math.pi * 2 / 7) * i
+	-- Small dust-devil spiral
+	for i = 1, 8 do
+		local angle = (i / 8) * math.pi * 2
+		local radius = 0.35 + i * 0.12
+		local height = -0.8 + i * 0.23
 
-		local ring = Instance.new("Part")
-		ring.Shape = Enum.PartType.Cylinder
-		ring.Size = Vector3.new(
-			0.12,
-			1.5 + i * 0.18,
-			0.12
-		)
+		local swirl = Instance.new("Part")
+		swirl.Shape = Enum.PartType.Ball
+		swirl.Size = Vector3.new(0.18, 0.18, 0.18)
 
-		local radius = 0.4 + i * 0.12
-		local height = (i - 4) * 0.35
-
-		ring.CFrame =
-			CFrame.new(
-				position
-				+ Vector3.new(
-					math.cos(angle) * radius,
-					height,
-					math.sin(angle) * radius
-				)
+		swirl.Position =
+			position + Vector3.new(
+				math.cos(angle) * radius,
+				height,
+				math.sin(angle) * radius
 			)
-			* CFrame.Angles(0, angle, math.rad(90))
 
-		ring.Anchored = true
-		ring.CanCollide = false
-		ring.CanQuery = false
-		ring.CanTouch = false
+		swirl.Anchored = true
+		swirl.CanCollide = false
+		swirl.CanTouch = false
+		swirl.CanQuery = false
+		swirl.Material = Enum.Material.Neon
+		swirl.Color = VOID_COLOR
+		swirl.Transparency = 0.15
+		swirl.Parent = folder
 
-		makeVoidPart(ring)
-
-		ring.Parent = folder
+		TweenService:Create(
+			swirl,
+			TweenInfo.new(AFTERIMAGE_LIFETIME),
+			{
+				Transparency = 1,
+				Size = Vector3.new(0.01, 0.01, 0.01)
+			}
+		):Play()
 	end
 
-	-- Fade
-	task.delay(0.05, function()
-		for _, obj in ipairs(folder:GetDescendants()) do
-			if obj:IsA("BasePart") then
-				TweenService:Create(
-					obj,
-					TweenInfo.new(AFTERIMAGE_LIFETIME),
-					{Transparency = 1}
-				):Play()
-			end
-		end
+	TweenService:Create(
+		core,
+		TweenInfo.new(AFTERIMAGE_LIFETIME),
+		{
+			Transparency = 1,
+			Size = Vector3.new(0.05, 0.05, 0.05)
+		}
+	):Play()
 
-		task.wait(AFTERIMAGE_LIFETIME)
-		folder:Destroy()
-	end)
+	Debris:AddItem(folder, AFTERIMAGE_LIFETIME + 0.1)
 end
 
 --==================================================
--- AFTERIMAGE
+-- VOID AFTERIMAGE
 --==================================================
 
 local function createAfterimage()
@@ -280,47 +291,31 @@ local function createAfterimage()
 		return
 	end
 
-	local clone = character:Clone()
-	clone.Name = "VoidAfterimage"
+	local folder = Instance.new("Folder")
+	folder.Name = "VoidAfterimage"
+	folder.Parent = workspace
 
-	for _, obj in ipairs(clone:GetDescendants()) do
+	for _, original in ipairs(character:GetDescendants()) do
+		if original:IsA("BasePart")
+			and original.Transparency < 1
+			and original.Name ~= "HumanoidRootPart" then
 
-		if obj:IsA("Script")
-		or obj:IsA("LocalScript")
-		or obj:IsA("ModuleScript") then
-			obj:Destroy()
+			local copy = Instance.new("Part")
 
-		elseif obj:IsA("BasePart") then
-			obj.Anchored = true
-			obj.CanCollide = false
-			obj.CanTouch = false
-			obj.CanQuery = false
-			obj.Material = Enum.Material.Neon
-			obj.Color = Color3.fromRGB(65, 20, 130)
-			obj.Transparency = 0.55
+			copy.Name = "VoidBody"
+			copy.Size = original.Size
+			copy.CFrame = original.CFrame
+			copy.Anchored = true
+			copy.CanCollide = false
+			copy.CanTouch = false
+			copy.CanQuery = false
+			copy.Material = Enum.Material.Neon
+			copy.Color = VOID_COLOR
+			copy.Transparency = 0.5
+			copy.Parent = folder
 
-		elseif obj:IsA("Decal") then
-			obj.Transparency = 0.7
-		end
-	end
-
-	clone.Parent = workspace
-
-	local afterRoot = clone:FindFirstChild("HumanoidRootPart")
-
-	if afterRoot then
-		afterRoot.CFrame = root.CFrame
-
-		createDustDevil(
-			afterRoot.Position,
-			workspace
-		)
-	end
-
-	for _, obj in ipairs(clone:GetDescendants()) do
-		if obj:IsA("BasePart") then
 			TweenService:Create(
-				obj,
+				copy,
 				TweenInfo.new(AFTERIMAGE_LIFETIME),
 				{
 					Transparency = 1
@@ -329,19 +324,17 @@ local function createAfterimage()
 		end
 	end
 
-	task.delay(AFTERIMAGE_LIFETIME, function()
-		if clone then
-			clone:Destroy()
-		end
-	end)
+	-- Small black-hole dust devil around every afterimage
+	createDustDevil(
+		root.Position + Vector3.new(0, 1.5, 0)
+	)
+
+	Debris:AddItem(folder, AFTERIMAGE_LIFETIME + 0.1)
 end
 
 --==================================================
--- RUN SYSTEM
+-- RUN LOOP
 --==================================================
-
-local effectConnection
-local lastAfterimage = 0
 
 local function enableRun()
 	if not humanoid then
@@ -352,43 +345,50 @@ local function enableRun()
 	humanoid.WalkSpeed = SPEED
 
 	toggle.Text = "NAOYA RUN: ON"
-	toggle.BackgroundColor3 = Color3.fromRGB(75, 35, 150)
+	toggle.BackgroundColor3 = Color3.fromRGB(80, 35, 160)
 
-	if effectConnection then
-		effectConnection:Disconnect()
+	status.Text = "NAOYA RUN • 100 SPEED"
+	status.TextColor3 = Color3.fromRGB(180, 140, 255)
+
+	if runConnection then
+		runConnection:Disconnect()
 	end
 
-	effectConnection = RunService.RenderStepped:Connect(function()
+	local lastAfterimage = 0
+
+	runConnection = RunService.RenderStepped:Connect(function()
 		if not running then
 			return
 		end
 
-		-- Infinite run bar
-		bar.Size = UDim2.fromScale(1, 1)
-
-		-- Keep speed at 100
+		-- Speed stays at 100
 		if humanoid then
 			humanoid.WalkSpeed = SPEED
 		end
 
-		-- Only create effects while moving
-		if humanoid.MoveDirection.Magnitude > 0.05 then
-			local now = os.clock()
+		-- Infinite bar
+		bar.Size = UDim2.fromScale(1, 1)
 
-			if now - lastAfterimage >= AFTERIMAGE_INTERVAL then
-				lastAfterimage = now
-				createAfterimage()
-			end
+		-- LOOP FOREVER WHILE ON
+		local now = os.clock()
+
+		if now - lastAfterimage >= AFTERIMAGE_RATE then
+			lastAfterimage = now
+			createAfterimage()
 		end
 	end)
 end
 
+--==================================================
+-- STOP
+--==================================================
+
 local function disableRun()
 	running = false
 
-	if effectConnection then
-		effectConnection:Disconnect()
-		effectConnection = nil
+	if runConnection then
+		runConnection:Disconnect()
+		runConnection = nil
 	end
 
 	if humanoid then
@@ -397,8 +397,16 @@ local function disableRun()
 
 	toggle.Text = "NAOYA RUN: OFF"
 	toggle.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+
+	status.Text = "NAOYA RUN • OFF"
+	status.TextColor3 = Color3.fromRGB(150, 150, 170)
+
 	bar.Size = UDim2.fromScale(1, 1)
 end
+
+--==================================================
+-- BUTTON
+--==================================================
 
 toggle.MouseButton1Click:Connect(function()
 	if running then
@@ -408,17 +416,4 @@ toggle.MouseButton1Click:Connect(function()
 	end
 end)
 
---==================================================
--- RESPAWN SAFETY
---==================================================
-
-player.CharacterAdded:Connect(function(char)
-	setupCharacter(char)
-
-	if running then
-		task.wait(0.5)
-		enableRun()
-	end
-end)
-
-print("Navy Hub (Beta) loaded.")
+print("Navy Hub (Beta) — Naoya Run loaded.")
