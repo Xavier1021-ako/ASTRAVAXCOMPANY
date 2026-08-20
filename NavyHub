@@ -11,9 +11,12 @@ local UserInputService = game:GetService("UserInputService")
 local Debris = game:GetService("Debris")
 
 local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local root = character:WaitForChild("HumanoidRootPart")
 
 local RUN_SPEED = 190
-local FLY_SPEED = 150
+local FLY_SPEED = 190
 local AFTERIMAGE_LIFETIME = 0.9
 local AFTERIMAGE_INTERVAL = 0.16
 
