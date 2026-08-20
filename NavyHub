@@ -436,11 +436,40 @@ local function startFlight()
 	flightOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
 	flightOrientation.MaxTorque = math.huge
 	flightOrientation.Responsiveness = 25
+--========================================================
+-- HERO FLIGHT - FREE FLY
+--========================================================
+
+local function startFlight()
+	if not root or not humanoid then
+		return
+	end
+
+	flying = true
+
+	humanoid.AutoRotate = false
+	humanoid.PlatformStand = true
+
+	flightAttachment = Instance.new("Attachment")
+	flightAttachment.Parent = root
+
+	flightVelocity = Instance.new("LinearVelocity")
+	flightVelocity.Attachment0 = flightAttachment
+	flightVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
+	flightVelocity.MaxForce = math.huge
+	flightVelocity.VectorVelocity = Vector3.zero
+	flightVelocity.Parent = root
+
+	flightOrientation = Instance.new("AlignOrientation")
+	flightOrientation.Attachment0 = flightAttachment
+	flightOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
+	flightOrientation.MaxTorque = math.huge
+	flightOrientation.Responsiveness = 25
 	flightOrientation.Parent = root
 
 	flyButton.Text = "HERO FLY: ON"
 	flyButton.BackgroundColor3 = Color3.fromRGB(80, 35, 160)
-	status.Text = "SUPERMAN FLIGHT • ON"
+	status.Text = "SUPERMAN FLIGHT • FREE FLY"
 
 	local currentVelocity = Vector3.zero
 
@@ -456,26 +485,32 @@ local function startFlight()
 
 		local direction = Vector3.zero
 
+		-- FORWARD
 		if UserInputService:IsKeyDown(Enum.KeyCode.W) then
 			direction += camera.CFrame.LookVector
 		end
 
+		-- BACK
 		if UserInputService:IsKeyDown(Enum.KeyCode.S) then
 			direction -= camera.CFrame.LookVector
 		end
 
+		-- LEFT
 		if UserInputService:IsKeyDown(Enum.KeyCode.A) then
 			direction -= camera.CFrame.RightVector
 		end
 
+		-- RIGHT
 		if UserInputService:IsKeyDown(Enum.KeyCode.D) then
 			direction += camera.CFrame.RightVector
 		end
 
+		-- UP
 		if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
 			direction += Vector3.new(0, 1, 0)
 		end
 
+		-- DOWN
 		if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
 			direction -= Vector3.new(0, 1, 0)
 		end
@@ -484,16 +519,21 @@ local function startFlight()
 			direction = direction.Unit
 		end
 
+		local targetVelocity = direction * FLY_SPEED
+
 		currentVelocity = currentVelocity:Lerp(
-			direction * FLY_SPEED,
-			math.clamp(dt * 9, 0, 1)
+			targetVelocity,
+			math.clamp(dt * 10, 0, 1)
 		)
 
 		flightVelocity.VectorVelocity = currentVelocity
 
-		local lookDirection = direction
+		-- Superman-style facing
+		local lookDirection
 
-		if lookDirection.Magnitude < 0.01 then
+		if direction.Magnitude > 0.01 then
+			lookDirection = direction
+		else
 			lookDirection = camera.CFrame.LookVector
 		end
 
@@ -502,8 +542,11 @@ local function startFlight()
 			root.Position + lookDirection
 		)
 
-		if direction.Magnitude > 0 and math.random() < 0.35 then
-			createDustDevil(root.Position)
+		-- Afterimages while flying
+		if effectsEnabled and direction.Magnitude > 0 then
+			if math.random() < 0.25 then
+				createAfterimage()
+			end
 		end
 	end)
 end
@@ -532,6 +575,199 @@ local function stopFlight()
 			Vector3.new(0, -10000, 0),
 			params
 		)
+--========================================================
+-- HERO FLIGHT
+-- DEFAULT ROBLOX JOYSTICK + PC CONTROLS
+--========================================================
+
+local jumpRequested = false
+
+-- Mobile/default Roblox jump button
+UserInputService.JumpRequest:Connect(function()
+	if flying then
+		jumpRequested = true
+	end
+end)
+
+local function startFlight()
+	if not root or not humanoid then
+		return
+	end
+
+	flying = true
+
+	-- IMPORTANT:
+	-- Do NOT use PlatformStand here.
+	-- Keeping the Humanoid active lets the default
+	-- Roblox mobile joystick continue working.
+	humanoid.AutoRotate = false
+
+	flightAttachment = Instance.new("Attachment")
+	flightAttachment.Name = "AstravaxFlightAttachment"
+	flightAttachment.Parent = root
+
+	flightVelocity = Instance.new("LinearVelocity")
+	flightVelocity.Name = "AstravaxFlightVelocity"
+	flightVelocity.Attachment0 = flightAttachment
+	flightVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
+	flightVelocity.MaxForce = math.huge
+	flightVelocity.VectorVelocity = Vector3.zero
+	flightVelocity.Parent = root
+
+	flightOrientation = Instance.new("AlignOrientation")
+	flightOrientation.Name = "AstravaxFlightOrientation"
+	flightOrientation.Attachment0 = flightAttachment
+	flightOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
+	flightOrientation.MaxTorque = math.huge
+	flightOrientation.Responsiveness = 25
+	flightOrientation.Parent = root
+
+	flyButton.Text = "HERO FLY: ON"
+	flyButton.BackgroundColor3 = Color3.fromRGB(80, 35, 160)
+	status.Text = "SUPERMAN FLIGHT • FREE FLY"
+
+	local currentVelocity = Vector3.zero
+
+	flyConnection = RunService.RenderStepped:Connect(function(dt)
+		if not flying or not root or not flightVelocity then
+			return
+		end
+
+		local camera = workspace.CurrentCamera
+
+		if not camera then
+			return
+		end
+
+		local direction = Vector3.zero
+--================================================
+-- DEFAULT ROBLOX MOBILE JOYSTICK
+-- LEFT / RIGHT / FORWARD / BACK
+--================================================
+
+local moveDirection = humanoid.MoveDirection
+
+if moveDirection.Magnitude > 0.01 then
+	-- Use the joystick's movement direction directly.
+	-- This gives LEFT + RIGHT + FORWARD + BACK.
+	direction += moveDirection
+end
+
+		--================================================
+		-- PC W/A/S/D
+		--================================================
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+			direction += camera.CFrame.LookVector
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+			direction -= camera.CFrame.LookVector
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+			direction -= camera.CFrame.RightVector
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+			direction += camera.CFrame.RightVector
+		end
+
+		--================================================
+		-- UP
+		-- Mobile jump button OR PC Space
+		--================================================
+
+		if jumpRequested
+			or UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+
+			direction += Vector3.new(0, 1, 0)
+			jumpRequested = false
+		end
+
+		--================================================
+		-- DOWN
+		-- PC LeftControl
+		--================================================
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+			direction -= Vector3.new(0, 1, 0)
+		end
+
+		--================================================
+		-- NORMALIZE
+		--================================================
+
+		if direction.Magnitude > 0.01 then
+			direction = direction.Unit
+		end
+
+		local targetVelocity = direction * FLY_SPEED
+
+		currentVelocity = currentVelocity:Lerp(
+			targetVelocity,
+			math.clamp(dt * 10, 0, 1)
+		)
+
+		flightVelocity.VectorVelocity = currentVelocity
+
+		--================================================
+		-- SUPERMAN FACING
+		--================================================
+
+		local lookDirection = direction
+
+		if lookDirection.Magnitude < 0.01 then
+			lookDirection = camera.CFrame.LookVector
+		end
+
+		flightOrientation.CFrame = CFrame.lookAt(
+			root.Position,
+			root.Position + lookDirection
+		)
+
+		--================================================
+		-- AFTERIMAGE
+		--================================================
+
+		if effectsEnabled
+			and direction.Magnitude > 0
+			and math.random() < 0.25 then
+
+			createAfterimage()
+		end
+	end)
+end
+
+local function stopFlight()
+	if not flying then
+		return
+	end
+
+	flying = false
+	jumpRequested = false
+
+	if flyConnection then
+		flyConnection:Disconnect()
+		flyConnection = nil
+	end
+
+	local crashPosition = root and root.Position
+
+	-- Find floor for crash effect
+	if root then
+		local params = RaycastParams.new()
+
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {
+			character
+		}
+
+		local result = workspace:Raycast(
+			root.Position,
+			Vector3.new(0, -10000, 0),
+			params
+		)
 
 		if result then
 			crashPosition = result.Position
@@ -554,9 +790,7 @@ local function stopFlight()
 	end
 
 	if humanoid then
-		humanoid.PlatformStand = false
 		humanoid.AutoRotate = true
-		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
 		humanoid.WalkSpeed = running and RUN_SPEED or 16
 	end
 
@@ -564,14 +798,19 @@ local function stopFlight()
 		root.AssemblyLinearVelocity = Vector3.zero
 	end
 
+	-- HUGE SKY CRASH
 	if crashPosition then
 		createCrash(crashPosition)
 	end
 
 	flyButton.Text = "HERO FLY: OFF"
 	flyButton.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
-	status.Text = running and "NAOYA RUN • 190 SPEED" or "READY"
+
+	status.Text = running
+		and "NAOYA RUN • 190 SPEED"
+		or "READY"
 end
+
 
 --========================================================
 -- BUTTONS
