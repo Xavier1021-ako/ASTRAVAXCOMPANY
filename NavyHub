@@ -1,7 +1,7 @@
 --========================================================
 -- ASTRAVAX
 -- VOID EMPEROR COMMAND CENTER
--- ALL-IN-ONE
+-- COMPACT + MOBILE JOYSTICK + CREDITS
 --========================================================
 
 local Players = game:GetService("Players")
@@ -31,7 +31,6 @@ local root
 local running = false
 local flying = false
 local effectsEnabled = true
-local jumpRequested = false
 
 local runConnection
 local flyConnection
@@ -72,15 +71,15 @@ gui.Parent = playerGui
 
 local main = Instance.new("Frame")
 main.Name = "CommandCenter"
-main.Size = UDim2.fromOffset(330, 285)
-main.Position = UDim2.new(0.5, -165, 0.5, -142)
+main.Size = UDim2.fromOffset(260, 225)
+main.Position = UDim2.new(0.5, -130, 0.5, -112)
 main.BackgroundColor3 = VOID_DARK
 main.BorderSizePixel = 0
 main.Active = true
 main.Parent = gui
 
 local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 18)
+mainCorner.CornerRadius = UDim.new(0, 14)
 mainCorner.Parent = main
 
 local mainStroke = Instance.new("UIStroke")
@@ -94,56 +93,153 @@ mainStroke.Parent = main
 --========================================================
 
 local header = Instance.new("Frame")
-header.Size = UDim2.new(1, -20, 0, 62)
-header.Position = UDim2.fromOffset(10, 10)
+header.Size = UDim2.new(1, -14, 0, 48)
+header.Position = UDim2.fromOffset(7, 7)
 header.BackgroundColor3 = PANEL
 header.BorderSizePixel = 0
 header.Parent = main
 
 local headerCorner = Instance.new("UICorner")
-headerCorner.CornerRadius = UDim.new(0, 13)
+headerCorner.CornerRadius = UDim.new(0, 10)
 headerCorner.Parent = header
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -25, 0, 28)
-title.Position = UDim2.fromOffset(15, 7)
+title.Size = UDim2.new(1, -55, 0, 22)
+title.Position = UDim2.fromOffset(10, 4)
 title.BackgroundTransparency = 1
 title.Text = "VOID EMPEROR"
 title.TextColor3 = TEXT
-title.TextSize = 20
+title.TextSize = 16
 title.Font = Enum.Font.GothamBlack
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = header
 
 local subtitle = Instance.new("TextLabel")
-subtitle.Size = UDim2.new(1, -25, 0, 18)
-subtitle.Position = UDim2.fromOffset(15, 35)
+subtitle.Size = UDim2.new(1, -55, 0, 14)
+subtitle.Position = UDim2.fromOffset(10, 27)
 subtitle.BackgroundTransparency = 1
 subtitle.Text = "ASTRAVAX // COMMAND CENTER"
 subtitle.TextColor3 = VOID_BRIGHT
-subtitle.TextSize = 10
+subtitle.TextSize = 8
 subtitle.Font = Enum.Font.GothamBold
 subtitle.TextXAlignment = Enum.TextXAlignment.Left
 subtitle.Parent = header
+
+--========================================================
+-- SETTINGS / CREDITS GEAR
+--========================================================
+
+local creditsButton = Instance.new("TextButton")
+creditsButton.Name = "CreditsButton"
+creditsButton.Size = UDim2.fromOffset(32, 32)
+creditsButton.Position = UDim2.new(1, -39, 0, 8)
+creditsButton.BackgroundColor3 = PANEL_2
+creditsButton.BorderSizePixel = 0
+creditsButton.AutoButtonColor = false
+creditsButton.Text = "⚙"
+creditsButton.TextColor3 = TEXT
+creditsButton.TextSize = 19
+creditsButton.Font = Enum.Font.GothamBold
+creditsButton.Parent = header
+
+local gearCorner = Instance.new("UICorner")
+gearCorner.CornerRadius = UDim.new(0, 9)
+gearCorner.Parent = creditsButton
+
+local gearStroke = Instance.new("UIStroke")
+gearStroke.Color = VOID_PURPLE
+gearStroke.Thickness = 1
+gearStroke.Parent = creditsButton
+
+--========================================================
+-- CREDITS PANEL
+--========================================================
+
+local creditsPanel = Instance.new("Frame")
+creditsPanel.Name = "CreditsPanel"
+creditsPanel.Size = UDim2.fromOffset(240, 170)
+creditsPanel.Position = UDim2.new(0.5, -120, 0.5, -85)
+creditsPanel.BackgroundColor3 = VOID_DARK
+creditsPanel.BorderSizePixel = 0
+creditsPanel.Visible = false
+creditsPanel.ZIndex = 20
+creditsPanel.Parent = gui
+
+local creditsCorner = Instance.new("UICorner")
+creditsCorner.CornerRadius = UDim.new(0, 15)
+creditsCorner.Parent = creditsPanel
+
+local creditsStroke = Instance.new("UIStroke")
+creditsStroke.Color = VOID_PURPLE
+creditsStroke.Thickness = 2
+creditsStroke.Parent = creditsPanel
+
+local creditsTitle = Instance.new("TextLabel")
+creditsTitle.Size = UDim2.new(1, -60, 0, 30)
+creditsTitle.Position = UDim2.fromOffset(10, 12)
+creditsTitle.BackgroundTransparency = 1
+creditsTitle.Text = "CREDITS"
+creditsTitle.TextColor3 = TEXT
+creditsTitle.TextSize = 17
+creditsTitle.Font = Enum.Font.GothamBlack
+creditsTitle.TextXAlignment = Enum.TextXAlignment.Left
+creditsTitle.ZIndex = 21
+creditsTitle.Parent = creditsPanel
+
+local creditsText = Instance.new("TextLabel")
+creditsText.Size = UDim2.new(1, -20, 0, 90)
+creditsText.Position = UDim2.fromOffset(10, 50)
+creditsText.BackgroundTransparency = 1
+creditsText.Text = "Xavier_navyblue\nCHATGPT\n\nMade with love💜"
+creditsText.TextColor3 = Color3.fromRGB(210, 200, 230)
+creditsText.TextSize = 12
+creditsText.Font = Enum.Font.GothamBold
+creditsText.TextWrapped = true
+creditsText.ZIndex = 21
+creditsText.Parent = creditsPanel
+
+local closeCredits = Instance.new("TextButton")
+closeCredits.Size = UDim2.fromOffset(28, 28)
+closeCredits.Position = UDim2.new(1, -36, 0, 8)
+closeCredits.BackgroundColor3 = PANEL_2
+closeCredits.BorderSizePixel = 0
+closeCredits.Text = "×"
+closeCredits.TextColor3 = TEXT
+closeCredits.TextSize = 18
+closeCredits.Font = Enum.Font.GothamBold
+closeCredits.ZIndex = 21
+closeCredits.Parent = creditsPanel
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 8)
+closeCorner.Parent = closeCredits
+
+creditsButton.Activated:Connect(function()
+	creditsPanel.Visible = true
+end)
+
+closeCredits.Activated:Connect(function()
+	creditsPanel.Visible = false
+end)
 
 --========================================================
 -- STATUS
 --========================================================
 
 local statusFrame = Instance.new("Frame")
-statusFrame.Size = UDim2.new(1, -20, 0, 38)
-statusFrame.Position = UDim2.fromOffset(10, 80)
+statusFrame.Size = UDim2.new(1, -14, 0, 30)
+statusFrame.Position = UDim2.fromOffset(7, 61)
 statusFrame.BackgroundColor3 = PANEL
 statusFrame.BorderSizePixel = 0
 statusFrame.Parent = main
 
 local statusCorner = Instance.new("UICorner")
-statusCorner.CornerRadius = UDim.new(0, 10)
+statusCorner.CornerRadius = UDim.new(0, 8)
 statusCorner.Parent = statusFrame
 
 local statusDot = Instance.new("Frame")
-statusDot.Size = UDim2.fromOffset(9, 9)
-statusDot.Position = UDim2.fromOffset(14, 14)
+statusDot.Size = UDim2.fromOffset(7, 7)
+statusDot.Position = UDim2.fromOffset(10, 11)
 statusDot.BackgroundColor3 = VOID_BRIGHT
 statusDot.BorderSizePixel = 0
 statusDot.Parent = statusFrame
@@ -153,12 +249,12 @@ dotCorner.CornerRadius = UDim.new(1, 0)
 dotCorner.Parent = statusDot
 
 local status = Instance.new("TextLabel")
-status.Size = UDim2.new(1, -40, 1, 0)
-status.Position = UDim2.fromOffset(32, 0)
+status.Size = UDim2.new(1, -30, 1, 0)
+status.Position = UDim2.fromOffset(25, 0)
 status.BackgroundTransparency = 1
 status.Text = "SYSTEM READY"
 status.TextColor3 = Color3.fromRGB(185, 175, 210)
-status.TextSize = 11
+status.TextSize = 9
 status.Font = Enum.Font.GothamBold
 status.TextXAlignment = Enum.TextXAlignment.Left
 status.Parent = statusFrame
@@ -167,22 +263,22 @@ status.Parent = statusFrame
 -- BUTTON CREATOR
 --========================================================
 
-local function createButton(text, y)
+local function createButton(text, y, textSize)
 	local button = Instance.new("TextButton")
 
-	button.Size = UDim2.new(1, -20, 0, 45)
-	button.Position = UDim2.fromOffset(10, y)
+	button.Size = UDim2.new(1, -14, 0, 35)
+	button.Position = UDim2.fromOffset(7, y)
 	button.BackgroundColor3 = PANEL_2
 	button.BorderSizePixel = 0
 	button.AutoButtonColor = false
 	button.Text = text
 	button.TextColor3 = TEXT
-	button.TextSize = 13
+	button.TextSize = textSize or 10
 	button.Font = Enum.Font.GothamBold
 	button.Parent = main
 
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 11)
+	corner.CornerRadius = UDim.new(0, 9)
 	corner.Parent = button
 
 	local stroke = Instance.new("UIStroke")
@@ -190,38 +286,12 @@ local function createButton(text, y)
 	stroke.Thickness = 1
 	stroke.Parent = button
 
-	button.MouseEnter:Connect(function()
-		TweenService:Create(
-			button,
-			TweenInfo.new(0.15),
-			{
-				BackgroundColor3 = Color3.fromRGB(45, 30, 75)
-			}
-		):Play()
-	end)
-
-	button.MouseLeave:Connect(function()
-		if not button:GetAttribute("Active") then
-			TweenService:Create(
-				button,
-				TweenInfo.new(0.15),
-				{
-					BackgroundColor3 = PANEL_2
-				}
-			):Play()
-		end
-	end)
-
 	return button
 end
 
---========================================================
--- BUTTONS
---========================================================
-
-local runButton = createButton("VoidEmperor", 128)
-local flyButton = createButton("Void Flight", 180)
-local effectsButton = createButton("Load Effects Of the Void", 232)
+local runButton = createButton("VoidEmperor", 99, 10)
+local flyButton = createButton("Void Flight", 140, 10)
+local effectsButton = createButton("Load Effects Of the Void", 181, 9)
 
 --========================================================
 -- BUTTON STATE
@@ -276,9 +346,7 @@ local function createAfterimage()
 			TweenService:Create(
 				ghost,
 				TweenInfo.new(AFTERIMAGE_LIFETIME),
-				{
-					Transparency = 1
-				}
+				{Transparency = 1}
 			):Play()
 		end
 	end
@@ -307,7 +375,6 @@ local function createDustDevil(position)
 
 		particle.Shape = Enum.PartType.Ball
 		particle.Size = Vector3.new(0.18, 0.18, 0.18)
-
 		particle.Position = position + Vector3.new(
 			math.cos(angle) * radius,
 			(i - 7) * 0.1,
@@ -377,38 +444,6 @@ local function createCrash(position)
 		}
 	):Play()
 
-	for i = 1, 70 do
-		local shard = Instance.new("Part")
-		local size = math.random(3, 9)
-
-		shard.Shape = Enum.PartType.Ball
-		shard.Size = Vector3.new(size, size, size)
-		shard.Position = position
-		shard.Anchored = true
-		shard.CanCollide = false
-		shard.CanTouch = false
-		shard.CanQuery = false
-		shard.Material = Enum.Material.Neon
-		shard.Color = i % 2 == 0 and VOID_PURPLE or VOID_BRIGHT
-		shard.Parent = folder
-
-		local angle = math.random() * math.pi * 2
-		local distance = math.random(80, 350)
-
-		TweenService:Create(
-			shard,
-			TweenInfo.new(math.random(60, 120) / 100),
-			{
-				Position = position + Vector3.new(
-					math.cos(angle) * distance,
-					math.random(-40, 100),
-					math.sin(angle) * distance
-				),
-				Transparency = 1
-			}
-		):Play()
-	end
-
 	Debris:AddItem(folder, 2)
 end
 
@@ -476,18 +511,7 @@ local function setRun(enabled)
 end
 
 --========================================================
--- MOBILE JUMP
---========================================================
-
-UserInputService.JumpRequest:Connect(function()
-	if flying then
-		jumpRequested = true
-	end
-end)
-
---========================================================
--- VOID FLIGHT
--- DEFAULT ROBLOX JOYSTICK
+-- MOBILE JOYSTICK FREE FLIGHT
 --========================================================
 
 local function startFlight()
@@ -526,7 +550,7 @@ local function startFlight()
 		"Void Flight • ACTIVE"
 	)
 
-	status.Text = "VOID FLIGHT // FREE FLY"
+	status.Text = "VOID FLIGHT // JOYSTICK CONTROL"
 
 	local currentVelocity = Vector3.zero
 
@@ -541,43 +565,46 @@ local function startFlight()
 			return
 		end
 
-		local direction = Vector3.zero
-
 		-- DEFAULT ROBLOX MOBILE JOYSTICK
 		local moveDirection = humanoid.MoveDirection
+		local direction = Vector3.zero
 
 		if moveDirection.Magnitude > 0.01 then
-			direction += moveDirection
-		end
+			local cameraLook = camera.CFrame.LookVector
+			local cameraRight = camera.CFrame.RightVector
 
-		-- PC CONTROLS
-		if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-			direction += camera.CFrame.LookVector
-		end
+			local flatForward = Vector3.new(
+				cameraLook.X,
+				0,
+				cameraLook.Z
+			)
 
-		if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-			direction -= camera.CFrame.LookVector
-		end
+			local flatRight = Vector3.new(
+				cameraRight.X,
+				0,
+				cameraRight.Z
+			)
 
-		if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-			direction -= camera.CFrame.RightVector
-		end
+			if flatForward.Magnitude > 0.01 then
+				flatForward = flatForward.Unit
+			end
 
-		if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-			direction += camera.CFrame.RightVector
-		end
+			if flatRight.Magnitude > 0.01 then
+				flatRight = flatRight.Unit
+			end
 
-		-- UP
-		if jumpRequested
-			or UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+			local forwardAmount = moveDirection:Dot(flatForward)
+			local rightAmount = moveDirection:Dot(flatRight)
 
-			direction += Vector3.new(0, 1, 0)
-			jumpRequested = false
-		end
+			direction =
+				flatForward * forwardAmount
+				+ flatRight * rightAmount
 
-		-- DOWN
-		if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-			direction -= Vector3.new(0, 1, 0)
+			direction += Vector3.new(
+				0,
+				cameraLook.Y * math.abs(forwardAmount),
+				0
+			)
 		end
 
 		if direction.Magnitude > 0.01 then
@@ -593,16 +620,12 @@ local function startFlight()
 
 		flightVelocity.VectorVelocity = currentVelocity
 
-		local lookDirection = direction
-
-		if lookDirection.Magnitude < 0.01 then
-			lookDirection = camera.CFrame.LookVector
+		if direction.Magnitude > 0.01 then
+			flightOrientation.CFrame = CFrame.lookAt(
+				root.Position,
+				root.Position + direction
+			)
 		end
-
-		flightOrientation.CFrame = CFrame.lookAt(
-			root.Position,
-			root.Position + lookDirection
-		)
 
 		if effectsEnabled
 			and direction.Magnitude > 0.01
@@ -623,30 +646,10 @@ local function stopFlight()
 	end
 
 	flying = false
-	jumpRequested = false
 
 	if flyConnection then
 		flyConnection:Disconnect()
 		flyConnection = nil
-	end
-
-	local crashPosition = root and root.Position
-
-	if root then
-		local params = RaycastParams.new()
-
-		params.FilterType = Enum.RaycastFilterType.Exclude
-		params.FilterDescendantsInstances = {character}
-
-		local result = workspace:Raycast(
-			root.Position,
-			Vector3.new(0, -10000, 0),
-			params
-		)
-
-		if result then
-			crashPosition = result.Position
-		end
 	end
 
 	if flightVelocity then
@@ -671,10 +674,7 @@ local function stopFlight()
 
 	if root then
 		root.AssemblyLinearVelocity = Vector3.zero
-	end
-
-	if crashPosition then
-		createCrash(crashPosition)
+		createCrash(root.Position)
 	end
 
 	setButtonState(
@@ -735,7 +735,7 @@ effectsButton.Activated:Connect(function()
 end)
 
 --========================================================
--- DRAGGABLE UI
+-- DRAG UI
 --========================================================
 
 local dragging = false
@@ -795,7 +795,6 @@ player.CharacterAdded:Connect(function(char)
 	end
 
 	flying = false
-	jumpRequested = false
 
 	setupCharacter(char)
 
