@@ -1,7 +1,6 @@
 --========================================================
--- ASTRAVAX
--- VOID EMPEROR COMMAND CENTER
--- COMPACT + MOBILE JOYSTICK + CREDITS
+-- ASTRAVAX NAVY HUB
+-- ALL-IN-ONE
 --========================================================
 
 local Players = game:GetService("Players")
@@ -10,728 +9,762 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Debris = game:GetService("Debris")
 
-local player = Players.LocalPlayer
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
 
-local RUN_SPEED = 190
-local FLY_SPEED = 190
-local AFTERIMAGE_LIFETIME = 0.7
-local AFTERIMAGE_INTERVAL = 0.12
+local SPEED = 190
+local FLIGHT_SPEED = 190
+local EFFECTS = true
+local FLYING = false
+local EMPEROR = false
+local ANIMATION = nil
+local AnimationTime = 0
 
-local VOID_PURPLE = Color3.fromRGB(110, 40, 255)
-local VOID_BRIGHT = Color3.fromRGB(190, 100, 255)
-local VOID_DARK = Color3.fromRGB(7, 5, 18)
-local PANEL = Color3.fromRGB(15, 12, 30)
-local PANEL_2 = Color3.fromRGB(25, 20, 45)
-local TEXT = Color3.fromRGB(240, 235, 255)
+local Character
+local Humanoid
+local Root
 
-local character
-local humanoid
-local root
+local FlightAttachment
+local FlightVelocity
+local FlightOrientation
+local FlightConnection
 
-local running = false
-local flying = false
-local effectsEnabled = true
-
-local runConnection
-local flyConnection
-
-local flightAttachment
-local flightVelocity
-local flightOrientation
+local Purple = Color3.fromRGB(125, 45, 255)
+local BrightPurple = Color3.fromRGB(200, 120, 255)
+local Dark = Color3.fromRGB(9, 6, 20)
+local Panel = Color3.fromRGB(20, 14, 38)
+local TextColor = Color3.fromRGB(245, 240, 255)
 
 --========================================================
 -- CHARACTER
 --========================================================
 
-local function setupCharacter(char)
-	character = char
-	humanoid = char:WaitForChild("Humanoid")
-	root = char:WaitForChild("HumanoidRootPart")
+local function SetupCharacter(char)
+	Character = char
+	Humanoid = char:WaitForChild("Humanoid")
+	Root = char:WaitForChild("HumanoidRootPart")
 end
 
-setupCharacter(player.Character or player.CharacterAdded:Wait())
+SetupCharacter(Player.Character or Player.CharacterAdded:Wait())
 
 --========================================================
--- GUI
+-- MOTOR HELPERS
 --========================================================
 
-local playerGui = player:WaitForChild("PlayerGui")
+local function Motor(...)
+	if not Character then return nil end
 
-local oldGui = playerGui:FindFirstChild("AstravexVoidEmperor")
-if oldGui then
-	oldGui:Destroy()
-end
+	for _, name in ipairs({...}) do
+		local obj = Character:FindFirstChild(name, true)
 
-local gui = Instance.new("ScreenGui")
-gui.Name = "AstravexVoidEmperor"
-gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
-gui.DisplayOrder = 999
-gui.Parent = playerGui
-
-local main = Instance.new("Frame")
-main.Name = "CommandCenter"
-main.Size = UDim2.fromOffset(260, 225)
-main.Position = UDim2.new(0.5, -130, 0.5, -112)
-main.BackgroundColor3 = VOID_DARK
-main.BorderSizePixel = 0
-main.Active = true
-main.Parent = gui
-
-local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 14)
-mainCorner.Parent = main
-
-local mainStroke = Instance.new("UIStroke")
-mainStroke.Color = VOID_PURPLE
-mainStroke.Thickness = 2
-mainStroke.Transparency = 0.15
-mainStroke.Parent = main
-
---========================================================
--- HEADER
---========================================================
-
-local header = Instance.new("Frame")
-header.Size = UDim2.new(1, -14, 0, 48)
-header.Position = UDim2.fromOffset(7, 7)
-header.BackgroundColor3 = PANEL
-header.BorderSizePixel = 0
-header.Parent = main
-
-local headerCorner = Instance.new("UICorner")
-headerCorner.CornerRadius = UDim.new(0, 10)
-headerCorner.Parent = header
-
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -55, 0, 22)
-title.Position = UDim2.fromOffset(10, 4)
-title.BackgroundTransparency = 1
-title.Text = "VOID EMPEROR"
-title.TextColor3 = TEXT
-title.TextSize = 16
-title.Font = Enum.Font.GothamBlack
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.Parent = header
-
-local subtitle = Instance.new("TextLabel")
-subtitle.Size = UDim2.new(1, -55, 0, 14)
-subtitle.Position = UDim2.fromOffset(10, 27)
-subtitle.BackgroundTransparency = 1
-subtitle.Text = "ASTRAVAX // COMMAND CENTER"
-subtitle.TextColor3 = VOID_BRIGHT
-subtitle.TextSize = 8
-subtitle.Font = Enum.Font.GothamBold
-subtitle.TextXAlignment = Enum.TextXAlignment.Left
-subtitle.Parent = header
-
---========================================================
--- SETTINGS / CREDITS GEAR
---========================================================
-
-local creditsButton = Instance.new("TextButton")
-creditsButton.Name = "CreditsButton"
-creditsButton.Size = UDim2.fromOffset(32, 32)
-creditsButton.Position = UDim2.new(1, -39, 0, 8)
-creditsButton.BackgroundColor3 = PANEL_2
-creditsButton.BorderSizePixel = 0
-creditsButton.AutoButtonColor = false
-creditsButton.Text = "⚙"
-creditsButton.TextColor3 = TEXT
-creditsButton.TextSize = 19
-creditsButton.Font = Enum.Font.GothamBold
-creditsButton.Parent = header
-
-local gearCorner = Instance.new("UICorner")
-gearCorner.CornerRadius = UDim.new(0, 9)
-gearCorner.Parent = creditsButton
-
-local gearStroke = Instance.new("UIStroke")
-gearStroke.Color = VOID_PURPLE
-gearStroke.Thickness = 1
-gearStroke.Parent = creditsButton
-
---========================================================
--- CREDITS PANEL
---========================================================
-
-local creditsPanel = Instance.new("Frame")
-creditsPanel.Name = "CreditsPanel"
-creditsPanel.Size = UDim2.fromOffset(240, 170)
-creditsPanel.Position = UDim2.new(0.5, -120, 0.5, -85)
-creditsPanel.BackgroundColor3 = VOID_DARK
-creditsPanel.BorderSizePixel = 0
-creditsPanel.Visible = false
-creditsPanel.ZIndex = 20
-creditsPanel.Parent = gui
-
-local creditsCorner = Instance.new("UICorner")
-creditsCorner.CornerRadius = UDim.new(0, 15)
-creditsCorner.Parent = creditsPanel
-
-local creditsStroke = Instance.new("UIStroke")
-creditsStroke.Color = VOID_PURPLE
-creditsStroke.Thickness = 2
-creditsStroke.Parent = creditsPanel
-
-local creditsTitle = Instance.new("TextLabel")
-creditsTitle.Size = UDim2.new(1, -60, 0, 30)
-creditsTitle.Position = UDim2.fromOffset(10, 12)
-creditsTitle.BackgroundTransparency = 1
-creditsTitle.Text = "CREDITS"
-creditsTitle.TextColor3 = TEXT
-creditsTitle.TextSize = 17
-creditsTitle.Font = Enum.Font.GothamBlack
-creditsTitle.TextXAlignment = Enum.TextXAlignment.Left
-creditsTitle.ZIndex = 21
-creditsTitle.Parent = creditsPanel
-
-local creditsText = Instance.new("TextLabel")
-creditsText.Size = UDim2.new(1, -20, 0, 90)
-creditsText.Position = UDim2.fromOffset(10, 50)
-creditsText.BackgroundTransparency = 1
-creditsText.Text = "Xavier_navyblue\nCHATGPT\n\nMade with love💜"
-creditsText.TextColor3 = Color3.fromRGB(210, 200, 230)
-creditsText.TextSize = 12
-creditsText.Font = Enum.Font.GothamBold
-creditsText.TextWrapped = true
-creditsText.ZIndex = 21
-creditsText.Parent = creditsPanel
-
-local closeCredits = Instance.new("TextButton")
-closeCredits.Size = UDim2.fromOffset(28, 28)
-closeCredits.Position = UDim2.new(1, -36, 0, 8)
-closeCredits.BackgroundColor3 = PANEL_2
-closeCredits.BorderSizePixel = 0
-closeCredits.Text = "×"
-closeCredits.TextColor3 = TEXT
-closeCredits.TextSize = 18
-closeCredits.Font = Enum.Font.GothamBold
-closeCredits.ZIndex = 21
-closeCredits.Parent = creditsPanel
-
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 8)
-closeCorner.Parent = closeCredits
-
-creditsButton.Activated:Connect(function()
-	creditsPanel.Visible = true
-end)
-
-closeCredits.Activated:Connect(function()
-	creditsPanel.Visible = false
-end)
-
---========================================================
--- STATUS
---========================================================
-
-local statusFrame = Instance.new("Frame")
-statusFrame.Size = UDim2.new(1, -14, 0, 30)
-statusFrame.Position = UDim2.fromOffset(7, 61)
-statusFrame.BackgroundColor3 = PANEL
-statusFrame.BorderSizePixel = 0
-statusFrame.Parent = main
-
-local statusCorner = Instance.new("UICorner")
-statusCorner.CornerRadius = UDim.new(0, 8)
-statusCorner.Parent = statusFrame
-
-local statusDot = Instance.new("Frame")
-statusDot.Size = UDim2.fromOffset(7, 7)
-statusDot.Position = UDim2.fromOffset(10, 11)
-statusDot.BackgroundColor3 = VOID_BRIGHT
-statusDot.BorderSizePixel = 0
-statusDot.Parent = statusFrame
-
-local dotCorner = Instance.new("UICorner")
-dotCorner.CornerRadius = UDim.new(1, 0)
-dotCorner.Parent = statusDot
-
-local status = Instance.new("TextLabel")
-status.Size = UDim2.new(1, -30, 1, 0)
-status.Position = UDim2.fromOffset(25, 0)
-status.BackgroundTransparency = 1
-status.Text = "SYSTEM READY"
-status.TextColor3 = Color3.fromRGB(185, 175, 210)
-status.TextSize = 9
-status.Font = Enum.Font.GothamBold
-status.TextXAlignment = Enum.TextXAlignment.Left
-status.Parent = statusFrame
-
---========================================================
--- BUTTON CREATOR
---========================================================
-
-local function createButton(text, y, textSize)
-	local button = Instance.new("TextButton")
-
-	button.Size = UDim2.new(1, -14, 0, 35)
-	button.Position = UDim2.fromOffset(7, y)
-	button.BackgroundColor3 = PANEL_2
-	button.BorderSizePixel = 0
-	button.AutoButtonColor = false
-	button.Text = text
-	button.TextColor3 = TEXT
-	button.TextSize = textSize or 10
-	button.Font = Enum.Font.GothamBold
-	button.Parent = main
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 9)
-	corner.Parent = button
-
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.fromRGB(60, 50, 90)
-	stroke.Thickness = 1
-	stroke.Parent = button
-
-	return button
-end
-
-local runButton = createButton("VoidEmperor", 99, 10)
-local flyButton = createButton("Void Flight", 140, 10)
-local effectsButton = createButton("Load Effects Of the Void", 181, 9)
-
---========================================================
--- BUTTON STATE
---========================================================
-
-local function setButtonState(button, active, text)
-	button.Text = text
-	button:SetAttribute("Active", active)
-
-	TweenService:Create(
-		button,
-		TweenInfo.new(0.15),
-		{
-			BackgroundColor3 = active
-				and Color3.fromRGB(70, 35, 120)
-				or PANEL_2
-		}
-	):Play()
-end
-
---========================================================
--- AFTERIMAGE
---========================================================
-
-local function createAfterimage()
-	if not effectsEnabled or not character then
-		return
+		if obj and obj:IsA("Motor6D") then
+			return obj
+		end
 	end
 
+	return nil
+end
+
+local function ResetAnimation()
+	if not Character then return end
+
+	for _, obj in ipairs(Character:GetDescendants()) do
+		if obj:IsA("Motor6D") then
+			obj.Transform = CFrame.identity
+		end
+	end
+end
+
+--========================================================
+-- ANIMATIONS
+--========================================================
+
+local function FlightAnimation(t, moving)
+	local RS = Motor("Right Shoulder", "RightShoulder")
+	local LS = Motor("Left Shoulder", "LeftShoulder")
+	local RH = Motor("Right Hip", "RightHip")
+	local LH = Motor("Left Hip", "LeftHip")
+	local Waist = Motor("Waist")
+
+	if moving then
+		if Waist then
+			Waist.Transform = CFrame.Angles(math.rad(-18), 0, 0)
+		end
+
+		if RS then
+			RS.Transform = CFrame.Angles(math.rad(-25), 0, math.rad(18))
+		end
+
+		if LS then
+			LS.Transform = CFrame.Angles(math.rad(-25), 0, math.rad(-18))
+		end
+
+		if RH then
+			RH.Transform = CFrame.Angles(math.rad(8), 0, 0)
+		end
+
+		if LH then
+			LH.Transform = CFrame.Angles(math.rad(8), 0, 0)
+		end
+	else
+		local hover = math.sin(t * 3) * 5
+
+		if Waist then
+			Waist.Transform = CFrame.Angles(math.rad(hover), 0, 0)
+		end
+
+		if RS then
+			RS.Transform = CFrame.Angles(math.rad(hover), 0, math.rad(12))
+		end
+
+		if LS then
+			LS.Transform = CFrame.Angles(math.rad(hover), 0, math.rad(-12))
+		end
+	end
+end
+
+local function SpeedAnimation(t)
+	local RS = Motor("Right Shoulder", "RightShoulder")
+	local LS = Motor("Left Shoulder", "LeftShoulder")
+	local RH = Motor("Right Hip", "RightHip")
+	local LH = Motor("Left Hip", "LeftHip")
+
+	local a = math.sin(t * 14)
+	local b = math.sin(t * 14 + math.pi)
+
+	if RS then
+		RS.Transform = CFrame.Angles(math.rad(25 * b), 0, math.rad(8))
+	end
+
+	if LS then
+		LS.Transform = CFrame.Angles(math.rad(25 * a), 0, math.rad(-8))
+	end
+
+	if RH then
+		RH.Transform = CFrame.Angles(math.rad(28 * a), 0, 0)
+	end
+
+	if LH then
+		LH.Transform = CFrame.Angles(math.rad(28 * b), 0, 0)
+	end
+end
+
+local function AbilityAnimation(t)
+	local RS = Motor("Right Shoulder", "RightShoulder")
+	local LS = Motor("Left Shoulder", "LeftShoulder")
+	local Waist = Motor("Waist")
+
+	local pulse = math.sin(t * 18)
+
+	if Waist then
+		Waist.Transform = CFrame.Angles(math.rad(-8), 0, 0)
+	end
+
+	if RS then
+		RS.Transform = CFrame.Angles(
+			math.rad(-65 + pulse * 10),
+			0,
+			math.rad(30)
+		)
+	end
+
+	if LS then
+		LS.Transform = CFrame.Angles(
+			math.rad(-65 - pulse * 10),
+			0,
+			math.rad(-30)
+		)
+	end
+end
+
+local function PlayAnimation(name, duration)
+	ANIMATION = name
+
+	task.delay(duration, function()
+		if ANIMATION == name then
+			ANIMATION = nil
+		end
+	end)
+end
+
+RunService.RenderStepped:Connect(function(dt)
+	AnimationTime += dt
+
+	if ANIMATION == "Ability" then
+		AbilityAnimation(AnimationTime)
+	elseif FLYING then
+		FlightAnimation(
+			AnimationTime,
+			Humanoid.MoveDirection.Magnitude > 0.05
+		)
+	elseif EMPEROR then
+		SpeedAnimation(AnimationTime)
+	else
+		ResetAnimation()
+	end
+end)
+
+--========================================================
+-- VOID EFFECTS
+--========================================================
+
+local function Burst(position, size)
+	if not EFFECTS then return end
+
+	local part = Instance.new("Part")
+	part.Shape = Enum.PartType.Ball
+	part.Size = Vector3.new(3, 3, 3)
+	part.Position = position
+	part.Anchored = true
+	part.CanCollide = false
+	part.CanTouch = false
+	part.CanQuery = false
+	part.Material = Enum.Material.Neon
+	part.Color = Purple
+	part.Transparency = 0.2
+	part.Parent = workspace
+
+	TweenService:Create(
+		part,
+		TweenInfo.new(0.7, Enum.EasingStyle.Exponential),
+		{
+			Size = size or Vector3.new(60, 60, 60),
+			Transparency = 1
+		}
+	):Play()
+
+	Debris:AddItem(part, 1)
+end
+
+local function Ring(position)
+	if not EFFECTS then return end
+
+	local ring = Instance.new("Part")
+	ring.Shape = Enum.PartType.Cylinder
+	ring.Size = Vector3.new(0.2, 3, 3)
+	ring.CFrame =
+		CFrame.new(position) *
+		CFrame.Angles(0, 0, math.rad(90))
+
+	ring.Anchored = true
+	ring.CanCollide = false
+	ring.CanTouch = false
+	ring.CanQuery = false
+	ring.Material = Enum.Material.Neon
+	ring.Color = BrightPurple
+	ring.Transparency = 0.2
+	ring.Parent = workspace
+
+	TweenService:Create(
+		ring,
+		TweenInfo.new(0.7, Enum.EasingStyle.Exponential),
+		{
+			Size = Vector3.new(0.2, 65, 65),
+			Transparency = 1
+		}
+	):Play()
+
+	Debris:AddItem(ring, 1)
+end
+
+local function Afterimage()
+	if not EFFECTS or not Character then return end
+
 	local folder = Instance.new("Folder")
-	folder.Name = "AstravexAfterimage"
+	folder.Name = "VoidAfterimage"
 	folder.Parent = workspace
 
-	for _, object in ipairs(character:GetDescendants()) do
-		if object:IsA("BasePart")
-			and object.Name ~= "HumanoidRootPart"
-			and object.Transparency < 1 then
+	for _, obj in ipairs(Character:GetDescendants()) do
+		if obj:IsA("BasePart")
+			and obj.Name ~= "HumanoidRootPart"
+			and obj.Transparency < 1 then
 
 			local ghost = Instance.new("Part")
-
-			ghost.Size = object.Size
-			ghost.CFrame = object.CFrame
+			ghost.Size = obj.Size
+			ghost.CFrame = obj.CFrame
 			ghost.Anchored = true
 			ghost.CanCollide = false
 			ghost.CanTouch = false
 			ghost.CanQuery = false
 			ghost.Material = Enum.Material.Neon
-			ghost.Color = VOID_PURPLE
-			ghost.Transparency = 0.5
+			ghost.Color = Purple
+			ghost.Transparency = 0.55
 			ghost.Parent = folder
 
 			TweenService:Create(
 				ghost,
-				TweenInfo.new(AFTERIMAGE_LIFETIME),
+				TweenInfo.new(0.6),
 				{Transparency = 1}
 			):Play()
 		end
-	end
-
-	Debris:AddItem(folder, AFTERIMAGE_LIFETIME + 0.1)
-end
-
---========================================================
--- VOID DUST
---========================================================
-
-local function createDustDevil(position)
-	if not effectsEnabled then
-		return
-	end
-
-	local folder = Instance.new("Folder")
-	folder.Name = "VoidDust"
-	folder.Parent = workspace
-
-	for i = 1, 14 do
-		local angle = i / 14 * math.pi * 2
-		local radius = 0.4 + i * 0.12
-
-		local particle = Instance.new("Part")
-
-		particle.Shape = Enum.PartType.Ball
-		particle.Size = Vector3.new(0.18, 0.18, 0.18)
-		particle.Position = position + Vector3.new(
-			math.cos(angle) * radius,
-			(i - 7) * 0.1,
-			math.sin(angle) * radius
-		)
-
-		particle.Anchored = true
-		particle.CanCollide = false
-		particle.CanTouch = false
-		particle.CanQuery = false
-		particle.Material = Enum.Material.Neon
-		particle.Color = VOID_PURPLE
-		particle.Parent = folder
-
-		TweenService:Create(
-			particle,
-			TweenInfo.new(0.7),
-			{
-				Transparency = 1,
-				Size = Vector3.zero
-			}
-		):Play()
 	end
 
 	Debris:AddItem(folder, 0.8)
 end
 
 --========================================================
--- VOID CRASH
---========================================================
-
-local function createCrash(position)
-	if not effectsEnabled then
-		return
-	end
-
-	local folder = Instance.new("Folder")
-	folder.Name = "VoidCrash"
-	folder.Parent = workspace
-
-	local core = Instance.new("Part")
-
-	core.Shape = Enum.PartType.Ball
-	core.Size = Vector3.new(30, 30, 30)
-	core.Position = position
-	core.Anchored = true
-	core.CanCollide = false
-	core.CanTouch = false
-	core.CanQuery = false
-	core.Material = Enum.Material.Neon
-	core.Color = VOID_PURPLE
-	core.Transparency = 0.2
-	core.Parent = folder
-
-	local light = Instance.new("PointLight")
-	light.Color = VOID_BRIGHT
-	light.Brightness = 80
-	light.Range = 220
-	light.Parent = core
-
-	TweenService:Create(
-		core,
-		TweenInfo.new(1, Enum.EasingStyle.Exponential),
-		{
-			Size = Vector3.new(350, 350, 350),
-			Transparency = 1
-		}
-	):Play()
-
-	Debris:AddItem(folder, 2)
-end
-
---========================================================
 -- VOID EMPEROR
 --========================================================
 
-local function setRun(enabled)
-	running = enabled
+local function EnableEmperor()
+	EMPEROR = true
+	Humanoid.WalkSpeed = SPEED
 
-	if enabled then
-		humanoid.WalkSpeed = RUN_SPEED
+	VoidEmperorButton.Text = "VoidEmperor • ACTIVE"
+	Status.Text = "VOID EMPEROR // 190 SPEED"
 
-		setButtonState(
-			runButton,
-			true,
-			"VoidEmperor • ACTIVE"
-		)
+	PlayAnimation("Emperor", 1)
+end
 
-		status.Text = "VOID EMPEROR // 190 SPEED"
+local function DisableEmperor()
+	EMPEROR = false
 
-		if runConnection then
-			runConnection:Disconnect()
-		end
+	if not FLYING then
+		Humanoid.WalkSpeed = 16
+	end
 
-		local lastEffect = 0
+	VoidEmperorButton.Text = "VoidEmperor"
+	Status.Text = "SYSTEM READY"
+end
 
-		runConnection = RunService.RenderStepped:Connect(function()
-			if not running then
-				return
-			end
-
-			if humanoid and not flying then
-				humanoid.WalkSpeed = RUN_SPEED
-			end
-
-			if os.clock() - lastEffect >= AFTERIMAGE_INTERVAL then
-				lastEffect = os.clock()
-
-				createAfterimage()
-
-				if root then
-					createDustDevil(root.Position)
-				end
-			end
-		end)
+local function ToggleEmperor()
+	if EMPEROR then
+		DisableEmperor()
 	else
-		if runConnection then
-			runConnection:Disconnect()
-			runConnection = nil
-		end
-
-		if humanoid and not flying then
-			humanoid.WalkSpeed = 16
-		end
-
-		setButtonState(
-			runButton,
-			false,
-			"VoidEmperor"
-		)
-
-		status.Text = "SYSTEM READY"
+		EnableEmperor()
 	end
 end
 
 --========================================================
--- MOBILE JOYSTICK FREE FLIGHT
+-- FLIGHT
+-- DEFAULT ROBLOX JOYSTICK
 --========================================================
 
-local function startFlight()
-	if not root or not humanoid then
-		return
-	end
+local function StartFlight()
+	if FLYING or not Root then return end
 
-	flying = true
+	FLYING = true
 
-	humanoid.AutoRotate = false
-	humanoid.PlatformStand = false
+	Humanoid.AutoRotate = false
+	Humanoid.PlatformStand = false
 
-	flightAttachment = Instance.new("Attachment")
-	flightAttachment.Name = "AstravexFlightAttachment"
-	flightAttachment.Parent = root
+	FlightAttachment = Instance.new("Attachment")
+	FlightAttachment.Name = "VoidFlightAttachment"
+	FlightAttachment.Parent = Root
 
-	flightVelocity = Instance.new("LinearVelocity")
-	flightVelocity.Name = "AstravexFlightVelocity"
-	flightVelocity.Attachment0 = flightAttachment
-	flightVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
-	flightVelocity.MaxForce = math.huge
-	flightVelocity.VectorVelocity = Vector3.zero
-	flightVelocity.Parent = root
+	FlightVelocity = Instance.new("LinearVelocity")
+	FlightVelocity.Name = "VoidFlightVelocity"
+	FlightVelocity.Attachment0 = FlightAttachment
+	FlightVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
+	FlightVelocity.MaxForce = math.huge
+	FlightVelocity.VectorVelocity = Vector3.zero
+	FlightVelocity.Parent = Root
 
-	flightOrientation = Instance.new("AlignOrientation")
-	flightOrientation.Name = "AstravexFlightOrientation"
-	flightOrientation.Attachment0 = flightAttachment
-	flightOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
-	flightOrientation.MaxTorque = math.huge
-	flightOrientation.Responsiveness = 25
-	flightOrientation.Parent = root
+	FlightOrientation = Instance.new("AlignOrientation")
+	FlightOrientation.Name = "VoidFlightOrientation"
+	FlightOrientation.Attachment0 = FlightAttachment
+	FlightOrientation.Mode =
+		Enum.OrientationAlignmentMode.OneAttachment
+	FlightOrientation.MaxTorque = math.huge
+	FlightOrientation.Responsiveness = 25
+	FlightOrientation.Parent = Root
 
-	setButtonState(
-		flyButton,
-		true,
-		"Void Flight • ACTIVE"
-	)
+	VoidFlightButton.Text = "Void Flight • ACTIVE"
+	Status.Text = "VOID FLIGHT // JOYSTICK CONTROL"
 
-	status.Text = "VOID FLIGHT // JOYSTICK CONTROL"
-
-	local currentVelocity = Vector3.zero
-
-	flyConnection = RunService.RenderStepped:Connect(function(dt)
-		if not flying or not root or not flightVelocity then
-			return
-		end
+	FlightConnection = RunService.RenderStepped:Connect(function(dt)
+		if not FLYING or not Root then return end
 
 		local camera = workspace.CurrentCamera
+		if not camera then return end
 
-		if not camera then
-			return
-		end
-
-		-- DEFAULT ROBLOX MOBILE JOYSTICK
-		local moveDirection = humanoid.MoveDirection
+		-- This reads the NORMAL Roblox mobile joystick.
+		local move = Humanoid.MoveDirection
 		local direction = Vector3.zero
 
-		if moveDirection.Magnitude > 0.01 then
-			local cameraLook = camera.CFrame.LookVector
-			local cameraRight = camera.CFrame.RightVector
+		if move.Magnitude > 0.01 then
+			local look = camera.CFrame.LookVector
+			local right = camera.CFrame.RightVector
 
-			local flatForward = Vector3.new(
-				cameraLook.X,
+			local forward = Vector3.new(
+				look.X,
 				0,
-				cameraLook.Z
+				look.Z
 			)
 
-			local flatRight = Vector3.new(
-				cameraRight.X,
+			local side = Vector3.new(
+				right.X,
 				0,
-				cameraRight.Z
+				right.Z
 			)
 
-			if flatForward.Magnitude > 0.01 then
-				flatForward = flatForward.Unit
+			if forward.Magnitude > 0.01 then
+				forward = forward.Unit
 			end
 
-			if flatRight.Magnitude > 0.01 then
-				flatRight = flatRight.Unit
+			if side.Magnitude > 0.01 then
+				side = side.Unit
 			end
 
-			local forwardAmount = moveDirection:Dot(flatForward)
-			local rightAmount = moveDirection:Dot(flatRight)
+			local forwardAmount = move:Dot(forward)
+			local sideAmount = move:Dot(side)
 
 			direction =
-				flatForward * forwardAmount
-				+ flatRight * rightAmount
+				forward * forwardAmount +
+				side * sideAmount
 
+			-- Camera pitch controls vertical flight.
 			direction += Vector3.new(
 				0,
-				cameraLook.Y * math.abs(forwardAmount),
+				look.Y * math.abs(forwardAmount),
 				0
 			)
+
+			if direction.Magnitude > 0.01 then
+				direction = direction.Unit
+			end
 		end
 
-		if direction.Magnitude > 0.01 then
-			direction = direction.Unit
-		end
+		local target =
+			direction * FLIGHT_SPEED
 
-		local targetVelocity = direction * FLY_SPEED
-
-		currentVelocity = currentVelocity:Lerp(
-			targetVelocity,
-			math.clamp(dt * 10, 0, 1)
-		)
-
-		flightVelocity.VectorVelocity = currentVelocity
-
-		if direction.Magnitude > 0.01 then
-			flightOrientation.CFrame = CFrame.lookAt(
-				root.Position,
-				root.Position + direction
+		FlightVelocity.VectorVelocity =
+			FlightVelocity.VectorVelocity:Lerp(
+				target,
+				math.clamp(dt * 10, 0, 1)
 			)
+
+		if direction.Magnitude > 0.01 then
+			FlightOrientation.CFrame =
+				CFrame.lookAt(
+					Root.Position,
+					Root.Position + direction
+				)
 		end
 
-		if effectsEnabled
+		if EFFECTS
 			and direction.Magnitude > 0.01
-			and math.random() < 0.25 then
+			and math.random() < 0.12 then
 
-			createAfterimage()
+			Afterimage()
 		end
 	end)
 end
 
---========================================================
--- STOP FLIGHT
---========================================================
+local function StopFlight()
+	if not FLYING then return end
 
-local function stopFlight()
-	if not flying then
-		return
+	FLYING = false
+
+	if FlightConnection then
+		FlightConnection:Disconnect()
+		FlightConnection = nil
 	end
 
-	flying = false
-
-	if flyConnection then
-		flyConnection:Disconnect()
-		flyConnection = nil
+	if FlightVelocity then
+		FlightVelocity:Destroy()
+		FlightVelocity = nil
 	end
 
-	if flightVelocity then
-		flightVelocity:Destroy()
-		flightVelocity = nil
+	if FlightOrientation then
+		FlightOrientation:Destroy()
+		FlightOrientation = nil
 	end
 
-	if flightOrientation then
-		flightOrientation:Destroy()
-		flightOrientation = nil
+	if FlightAttachment then
+		FlightAttachment:Destroy()
+		FlightAttachment = nil
 	end
 
-	if flightAttachment then
-		flightAttachment:Destroy()
-		flightAttachment = nil
+	Humanoid.AutoRotate = true
+	Humanoid.WalkSpeed = EMPEROR and SPEED or 16
+
+	if Root then
+		Burst(Root.Position)
+		Ring(Root.Position)
 	end
 
-	if humanoid then
-		humanoid.AutoRotate = true
-		humanoid.WalkSpeed = running and RUN_SPEED or 16
-	end
-
-	if root then
-		root.AssemblyLinearVelocity = Vector3.zero
-		createCrash(root.Position)
-	end
-
-	setButtonState(
-		flyButton,
-		false,
-		"Void Flight"
-	)
-
-	status.Text = running
+	VoidFlightButton.Text = "Void Flight"
+	Status.Text = EMPEROR
 		and "VOID EMPEROR // 190 SPEED"
 		or "SYSTEM READY"
 end
 
---========================================================
--- EFFECTS
---========================================================
-
-local function toggleEffects()
-	effectsEnabled = not effectsEnabled
-
-	if effectsEnabled then
-		setButtonState(
-			effectsButton,
-			true,
-			"Load Effects Of the Void • ON"
-		)
-
-		status.Text = "VOID EFFECTS // LOADED"
+local function ToggleFlight()
+	if FLYING then
+		StopFlight()
 	else
-		setButtonState(
-			effectsButton,
-			false,
-			"Load Effects Of the Void"
-		)
-
-		status.Text = "VOID EFFECTS // DISABLED"
+		StartFlight()
 	end
 end
 
 --========================================================
--- BUTTON EVENTS
+-- VOID ABILITY
 --========================================================
 
-runButton.Activated:Connect(function()
-	setRun(not running)
+local AbilityReady = true
+
+local function VoidAbility()
+	if not AbilityReady or not Root then return end
+
+	AbilityReady = false
+
+	PlayAnimation("Ability", 0.8)
+
+	Status.Text = "VOID ABILITY // CASTING"
+
+	Burst(Root.Position, Vector3.new(75, 75, 75))
+	Ring(Root.Position)
+	Afterimage()
+
+	task.delay(0.8, function()
+		Status.Text = FLYING
+			and "VOID FLIGHT // JOYSTICK CONTROL"
+			or EMPEROR
+				and "VOID EMPEROR // 190 SPEED"
+				or "SYSTEM READY"
+	end)
+
+	task.delay(0.1, function()
+		AbilityReady = true
+	end)
+end
+
+--========================================================
+-- UI
+--========================================================
+
+local OldGui = PlayerGui:FindFirstChild("AstravexNavyHub")
+if OldGui then OldGui:Destroy() end
+
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "AstravexNavyHub"
+Gui.ResetOnSpawn = false
+Gui.IgnoreGuiInset = true
+Gui.DisplayOrder = 999
+Gui.Parent = PlayerGui
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.fromOffset(280, 300)
+Main.Position = UDim2.new(0.5, -140, 0.5, -150)
+Main.BackgroundColor3 = Dark
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Parent = Gui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 15)
+MainCorner.Parent = Main
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Purple
+Stroke.Thickness = 2
+Stroke.Parent = Main
+
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, -14, 0, 50)
+Header.Position = UDim2.fromOffset(7, 7)
+Header.BackgroundColor3 = Panel
+Header.BorderSizePixel = 0
+Header.Parent = Main
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 11)
+HeaderCorner.Parent = Header
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -50, 0, 25)
+Title.Position = UDim2.fromOffset(10, 4)
+Title.BackgroundTransparency = 1
+Title.Text = "VOID EMPEROR"
+Title.TextColor3 = TextColor
+Title.TextSize = 17
+Title.Font = Enum.Font.GothamBlack
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = Header
+
+local Subtitle = Instance.new("TextLabel")
+Subtitle.Size = UDim2.new(1, -50, 0, 14)
+Subtitle.Position = UDim2.fromOffset(10, 29)
+Subtitle.BackgroundTransparency = 1
+Subtitle.Text = "ASTRAVAX // NAVY HUB"
+Subtitle.TextColor3 = BrightPurple
+Subtitle.TextSize = 8
+Subtitle.Font = Enum.Font.GothamBold
+Subtitle.TextXAlignment = Enum.TextXAlignment.Left
+Subtitle.Parent = Header
+
+local Gear = Instance.new("TextButton")
+Gear.Size = UDim2.fromOffset(34, 34)
+Gear.Position = UDim2.new(1, -41, 0, 8)
+Gear.BackgroundColor3 = Panel
+Gear.BorderSizePixel = 0
+Gear.Text = "⚙"
+Gear.TextColor3 = TextColor
+Gear.TextSize = 19
+Gear.Parent = Header
+
+local GearCorner = Instance.new("UICorner")
+GearCorner.CornerRadius = UDim.new(0, 9)
+GearCorner.Parent = Gear
+
+local Status = Instance.new("TextLabel")
+Status.Size = UDim2.new(1, -14, 0, 30)
+Status.Position = UDim2.fromOffset(7, 63)
+Status.BackgroundColor3 = Panel
+Status.BorderSizePixel = 0
+Status.Text = "SYSTEM READY"
+Status.TextColor3 = TextColor
+Status.TextSize = 9
+Status.Font = Enum.Font.GothamBold
+Status.Parent = Main
+
+--========================================================
+-- BUTTON CREATOR
+--========================================================
+
+local function MakeButton(text, y, textSize)
+	local button = Instance.new("TextButton")
+
+	button.Size = UDim2.new(1, -14, 0, 38)
+	button.Position = UDim2.fromOffset(7, y)
+	button.BackgroundColor3 = Panel
+	button.BorderSizePixel = 0
+	button.AutoButtonColor = false
+	button.Text = text
+	button.TextColor3 = TextColor
+	button.TextSize = textSize or 10
+	button.Font = Enum.Font.GothamBold
+	button.Parent = Main
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 9)
+	corner.Parent = button
+
+	return button
+end
+
+VoidEmperorButton =
+	MakeButton("VoidEmperor", 101)
+
+VoidFlightButton =
+	MakeButton("Void Flight", 145)
+
+EffectsButton =
+	MakeButton("Load Effects Of the Void", 189, 9)
+
+AbilityButton =
+	MakeButton("Void Ability", 233)
+
+--========================================================
+-- CREDITS
+--========================================================
+
+local Credits = Instance.new("Frame")
+Credits.Size = UDim2.fromOffset(250, 180)
+Credits.Position = UDim2.new(0.5, -125, 0.5, -90)
+Credits.BackgroundColor3 = Dark
+Credits.BorderSizePixel = 0
+Credits.Visible = false
+Credits.ZIndex = 20
+Credits.Parent = Gui
+
+local CreditsCorner = Instance.new("UICorner")
+CreditsCorner.CornerRadius = UDim.new(0, 15)
+CreditsCorner.Parent = Credits
+
+local CreditsStroke = Instance.new("UIStroke")
+CreditsStroke.Color = Purple
+CreditsStroke.Thickness = 2
+CreditsStroke.Parent = Credits
+
+local CreditsTitle = Instance.new("TextLabel")
+CreditsTitle.Size = UDim2.new(1, -20, 0, 30)
+CreditsTitle.Position = UDim2.fromOffset(10, 12)
+CreditsTitle.BackgroundTransparency = 1
+CreditsTitle.Text = "CREDITS"
+CreditsTitle.TextColor3 = TextColor
+CreditsTitle.TextSize = 18
+CreditsTitle.Font = Enum.Font.GothamBlack
+CreditsTitle.ZIndex = 21
+CreditsTitle.Parent = Credits
+
+local CreditsText = Instance.new("TextLabel")
+CreditsText.Size = UDim2.new(1, -20, 0, 100)
+CreditsText.Position = UDim2.fromOffset(10, 55)
+CreditsText.BackgroundTransparency = 1
+CreditsText.Text = "Xavier_navyblue\nCHATGPT\n\nMade with love💜"
+CreditsText.TextColor3 = TextColor
+CreditsText.TextSize = 13
+CreditsText.Font = Enum.Font.GothamBold
+CreditsText.ZIndex = 21
+CreditsText.Parent = Credits
+
+local Close = Instance.new("TextButton")
+Close.Size = UDim2.fromOffset(30, 30)
+Close.Position = UDim2.new(1, -38, 0, 8)
+Close.BackgroundColor3 = Panel
+Close.BorderSizePixel = 0
+Close.Text = "×"
+Close.TextColor3 = TextColor
+Close.TextSize = 18
+Close.ZIndex = 21
+Close.Parent = Credits
+
+--========================================================
+-- UI EVENTS
+--========================================================
+
+Gear.Activated:Connect(function()
+	Credits.Visible = true
 end)
 
-flyButton.Activated:Connect(function()
-	if flying then
-		stopFlight()
-	else
-		startFlight()
+Close.Activated:Connect(function()
+	Credits.Visible = false
+end)
+
+VoidEmperorButton.Activated:Connect(function()
+	ToggleEmperor()
+end)
+
+VoidFlightButton.Activated:Connect(function()
+	ToggleFlight()
+end)
+
+EffectsButton.Activated:Connect(function()
+	EFFECTS = not EFFECTS
+
+	EffectsButton.Text =
+		EFFECTS
+		and "Load Effects Of the Void • ON"
+		or "Load Effects Of the Void"
+
+	Status.Text =
+		EFFECTS
+		and "VOID EFFECTS // LOADED"
+		or "VOID EFFECTS // OFF"
+end)
+
+AbilityButton.Activated:Connect(function()
+	VoidAbility()
+end)
+
+--========================================================
+-- KEYBOARD
+--========================================================
+
+UserInputService.InputBegan:Connect(function(input, processed)
+	if processed then return end
+
+	if input.KeyCode == Enum.KeyCode.F then
+		ToggleFlight()
+
+	elseif input.KeyCode == Enum.KeyCode.LeftShift then
+		ToggleEmperor()
+
+	elseif input.KeyCode == Enum.KeyCode.Z then
+		VoidAbility()
 	end
-end)
-
-effectsButton.Activated:Connect(function()
-	toggleEffects()
 end)
 
 --========================================================
@@ -742,27 +775,25 @@ local dragging = false
 local dragStart
 local startPosition
 
-main.InputBegan:Connect(function(input)
+Header.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1
 		or input.UserInputType == Enum.UserInputType.Touch then
 
 		dragging = true
 		dragStart = input.Position
-		startPosition = main.Position
+		startPosition = Main.Position
 	end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-	if not dragging then
-		return
-	end
+	if not dragging then return end
 
 	if input.UserInputType == Enum.UserInputType.MouseMovement
 		or input.UserInputType == Enum.UserInputType.Touch then
 
 		local delta = input.Position - dragStart
 
-		main.Position = UDim2.new(
+		Main.Position = UDim2.new(
 			startPosition.X.Scale,
 			startPosition.X.Offset + delta.X,
 			startPosition.Y.Scale,
@@ -783,38 +814,61 @@ end)
 -- RESPAWN
 --========================================================
 
-player.CharacterAdded:Connect(function(char)
-	if flyConnection then
-		flyConnection:Disconnect()
-		flyConnection = nil
+Player.CharacterAdded:Connect(function(char)
+	FLYING = false
+
+	if FlightConnection then
+		FlightConnection:Disconnect()
+		FlightConnection = nil
 	end
 
-	if runConnection then
-		runConnection:Disconnect()
-		runConnection = nil
+	if FlightVelocity then
+		FlightVelocity:Destroy()
+		FlightVelocity = nil
 	end
 
-	flying = false
-
-	setupCharacter(char)
-
-	if running then
-		humanoid.WalkSpeed = RUN_SPEED
+	if FlightOrientation then
+		FlightOrientation:Destroy()
+		FlightOrientation = nil
 	end
 
-	setButtonState(
-		flyButton,
-		false,
-		"Void Flight"
-	)
+	if FlightAttachment then
+		FlightAttachment:Destroy()
+		FlightAttachment = nil
+	end
 
-	status.Text = running
+	SetupCharacter(char)
+
+	if EMPEROR then
+		Humanoid.WalkSpeed = SPEED
+	end
+
+	VoidFlightButton.Text = "Void Flight"
+	Status.Text = EMPEROR
 		and "VOID EMPEROR // 190 SPEED"
 		or "SYSTEM READY"
+end)
+
+--========================================================
+-- AFTERIMAGE LOOP
+--========================================================
+
+task.spawn(function()
+	while true do
+		task.wait(0.25)
+
+		if (FLYING or EMPEROR)
+			and EFFECTS
+			and Root
+			and math.random() < 0.2 then
+
+			Afterimage()
+		end
+	end
 end)
 
 --========================================================
 -- READY
 --========================================================
 
-status.Text = "VOID EMPEROR COMMAND CENTER // READY"
+print("[ASTRAVAX] NAVY HUB IS READY")
