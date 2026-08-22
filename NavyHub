@@ -9,6 +9,7 @@ local char,hum,root
 local purple=Color3.fromRGB(150,40,255)
 local white=Color3.fromRGB(240,230,255)
 local dark=Color3.fromRGB(8,5,14)
+local RUN_SPEED=190
 
 local function setup()
 	char=plr.Character or plr.CharacterAdded:Wait()
@@ -281,7 +282,7 @@ R.RenderStepped:Connect(function(dt)
 	ring.CFrame=CFrame.new(pos)*CFrame.Angles(math.rad(68),time*.4,0)
 
 	if speed and hum and not flying then
-		hum.WalkSpeed=100
+		hum.WalkSpeed=RUN_SPEED
 	elseif hum and not flying then
 		hum.WalkSpeed=16
 	end
@@ -382,20 +383,20 @@ title.InputBegan:Connect(function(i)
 end)
 
 -- DRAG MAIN
-local drag=false
+a local_drag=false
 local ds,sp
 
 title.InputBegan:Connect(function(i)
 	if i.UserInputType==Enum.UserInputType.MouseButton1
 	or i.UserInputType==Enum.UserInputType.Touch then
-		drag=true
+		a local_drag=true
 		ds=i.Position
 		sp=M.Position
 	end
 end)
 
 U.InputChanged:Connect(function(i)
-	if drag and (i.UserInputType==Enum.UserInputType.MouseMovement
+	if a local_drag and (i.UserInputType==Enum.UserInputType.MouseMovement
 	or i.UserInputType==Enum.UserInputType.Touch) then
 		local d=i.Position-ds
 		M.Position=UDim2.new(
@@ -408,7 +409,7 @@ end)
 U.InputEnded:Connect(function(i)
 	if i.UserInputType==Enum.UserInputType.MouseButton1
 	or i.UserInputType==Enum.UserInputType.Touch then
-		drag=false
+		a local_drag=false
 	end
 end)
 
