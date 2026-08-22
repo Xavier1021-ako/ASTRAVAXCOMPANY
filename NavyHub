@@ -1,1824 +1,453 @@
--- NAVY HUB BETA
--- PART 1/3
--- UI CORE + COSMIC BACKGROUND + SIDEBAR
+local P=game:GetService("Players")
+local U=game:GetService("UserInputService")
+local R=game:GetService("RunService")
+local T=game:GetService("TweenService")
+local D=game:GetService("Debris")
+local plr=P.LocalPlayer
+local gui=plr:WaitForChild("PlayerGui")
+local char,hum,root
+local purple=Color3.fromRGB(150,40,255)
+local white=Color3.fromRGB(240,230,255)
+local dark=Color3.fromRGB(8,5,14)
 
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
+local function setup()
+	char=plr.Character or plr.CharacterAdded:Wait()
+	hum=char:WaitForChild("Humanoid")
+	root=char:WaitForChild("HumanoidRootPart")
+end
+setup()
+plr.CharacterAdded:Connect(function() task.wait(.4) setup() end)
 
-local Player = Players.LocalPlayer
-local PlayerGui = Player:WaitForChild("PlayerGui")
+local old=gui:FindFirstChild("NavyHub")
+if old then old:Destroy() end
 
-local PURPLE = Color3.fromRGB(145, 40, 255)
-local PURPLE2 = Color3.fromRGB(190, 90, 255)
-local DARK = Color3.fromRGB(7, 5, 13)
-local DARK2 = Color3.fromRGB(15, 10, 24)
-local TEXT = Color3.fromRGB(240, 232, 255)
+local G=Instance.new("ScreenGui",gui)
+G.Name="NavyHub"
+G.ResetOnSpawn=false
 
-local Gui = Instance.new("ScreenGui")
-Gui.Name = "NavyHub"
-Gui.ResetOnSpawn = false
-Gui.IgnoreGuiInset = true
-Gui.Parent = PlayerGui
+local M=Instance.new("Frame",G)
+M.Size=UDim2.fromOffset(430,280)
+M.Position=UDim2.new(.5,-215,.5,-140)
+M.BackgroundColor3=dark
+M.BorderSizePixel=0
 
-local Main = Instance.new("Frame")
-Main.Name = "NavyHubMain"
-Main.Size = UDim2.fromOffset(520, 330)
-Main.Position = UDim2.new(0.5, -260, 0.5, -165)
-Main.BackgroundColor3 = DARK
-Main.BorderSizePixel = 0
-Main.Parent = Gui
+Instance.new("UICorner",M).CornerRadius=UDim.new(0,8)
+local ms=Instance.new("UIStroke",M)
+ms.Color=purple
+ms.Transparency=.35
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 9)
-MainCorner.Parent = Main
+local title=Instance.new("TextLabel",M)
+title.Size=UDim2.new(1,-45,0,30)
+title.Position=UDim2.fromOffset(10,0)
+title.BackgroundTransparency=1
+title.Text="NAVY HUB"
+title.TextColor3=white
+title.TextSize=15
+title.Font=Enum.Font.GothamBold
+title.TextXAlignment=Enum.TextXAlignment.Left
 
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = PURPLE
-MainStroke.Transparency = 0.35
-MainStroke.Thickness = 1
-MainStroke.Parent = Main
+local gear=Instance.new("TextButton",M)
+gear.Size=UDim2.fromOffset(28,24)
+gear.Position=UDim2.new(1,-34,0,3)
+gear.Text="⚙"
+gear.TextColor3=white
+gear.BackgroundColor3=dark
+gear.AutoButtonColor=false
 
--- SHORT HEADER
+local side=Instance.new("Frame",M)
+side.Size=UDim2.fromOffset(82,240)
+side.Position=UDim2.fromOffset(6,34)
+side.BackgroundColor3=Color3.fromRGB(13,8,20)
+side.BorderSizePixel=0
+Instance.new("UICorner",side).CornerRadius=UDim.new(0,6)
 
-local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 27)
-Header.BackgroundTransparency = 1
-Header.Parent = Main
+local content=Instance.new("Frame",M)
+content.Size=UDim2.new(1,-96,1,-40)
+content.Position=UDim2.fromOffset(91,34)
+content.BackgroundColor3=Color3.fromRGB(4,3,8)
+content.BorderSizePixel=0
+content.ClipsDescendants=true
+Instance.new("UICorner",content).CornerRadius=UDim.new(0,6)
 
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -50, 1, 0)
-Title.Position = UDim2.fromOffset(10, 0)
-Title.BackgroundTransparency = 1
-Title.Text = "NAVY HUB"
-Title.TextColor3 = TEXT
-Title.TextSize = 15
-Title.Font = Enum.Font.GothamBold
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = Header
-
-local TitleStroke = Instance.new("UIStroke")
-TitleStroke.Color = PURPLE
-TitleStroke.Transparency = 0.35
-TitleStroke.Parent = Title
-
--- CREDITS GEAR
-
-local Credits = Instance.new("TextButton")
-Credits.Size = UDim2.fromOffset(27, 23)
-Credits.Position = UDim2.new(1, -32, 0, 2)
-Credits.BackgroundColor3 = DARK2
-Credits.Text = "⚙"
-Credits.TextColor3 = TEXT
-Credits.TextSize = 15
-Credits.Font = Enum.Font.GothamBold
-Credits.AutoButtonColor = false
-Credits.Parent = Header
-
-local CreditsCorner = Instance.new("UICorner")
-CreditsCorner.CornerRadius = UDim.new(0, 6)
-CreditsCorner.Parent = Credits
-
--- SIDEBAR
-
-local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.fromOffset(88, 296)
-Sidebar.Position = UDim2.fromOffset(6, 30)
-Sidebar.BackgroundColor3 = Color3.fromRGB(10, 7, 17)
-Sidebar.BorderSizePixel = 0
-Sidebar.Parent = Main
-
-local SidebarCorner = Instance.new("UICorner")
-SidebarCorner.CornerRadius = UDim.new(0, 7)
-SidebarCorner.Parent = Sidebar
-
-local SidebarPadding = Instance.new("UIPadding")
-SidebarPadding.PaddingTop = UDim.new(0, 7)
-SidebarPadding.PaddingLeft = UDim.new(0, 5)
-SidebarPadding.PaddingRight = UDim.new(0, 5)
-SidebarPadding.Parent = Sidebar
-
-local SidebarLayout = Instance.new("UIListLayout")
-SidebarLayout.Padding = UDim.new(0, 4)
-SidebarLayout.Parent = Sidebar
-
--- CONTENT
-
-local Content = Instance.new("Frame")
-Content.Size = UDim2.new(1, -101, 1, -36)
-Content.Position = UDim2.fromOffset(98, 30)
-Content.BackgroundColor3 = Color3.fromRGB(5, 4, 10)
-Content.BorderSizePixel = 0
-Content.ClipsDescendants = true
-Content.Parent = Main
-
-local ContentCorner = Instance.new("UICorner")
-ContentCorner.CornerRadius = UDim.new(0, 7)
-ContentCorner.Parent = Content
-
--- COSMIC BACKGROUND
-
-local Space = Instance.new("Frame")
-Space.Size = UDim2.fromScale(1, 1)
-Space.BackgroundColor3 = Color3.fromRGB(3, 2, 8)
-Space.BorderSizePixel = 0
-Space.ZIndex = 0
-Space.Parent = Content
-
--- STARFIELD
-
-math.randomseed(os.clock())
-
-for i = 1, 110 do
-	local Star = Instance.new("Frame")
-
-	local Size = math.random(1, 3)
-
-	Star.Size = UDim2.fromOffset(Size, Size)
-	Star.Position = UDim2.fromScale(
-		math.random(),
-		math.random()
-	)
-
-	Star.BackgroundColor3 = Color3.fromRGB(
-		math.random(190, 255),
-		math.random(180, 240),
-		255
-	)
-
-	Star.BorderSizePixel = 0
-	Star.ZIndex = 0
-	Star.Parent = Space
-
-	local StarCorner = Instance.new("UICorner")
-	StarCorner.CornerRadius = UDim.new(1, 0)
-	StarCorner.Parent = Star
+local pages={}
+local function page(n)
+	local f=Instance.new("ScrollingFrame",content)
+	f.Name=n
+	f.Size=UDim2.fromScale(1,1)
+	f.BackgroundTransparency=1
+	f.BorderSizePixel=0
+	f.ScrollBarThickness=2
+	f.ScrollBarImageColor3=purple
+	f.Visible=false
+	local l=Instance.new("UIListLayout",f)
+	l.Padding=UDim.new(0,6)
+	Instance.new("UIPadding",f).PaddingTop=UDim.new(0,8)
+	pages[n]=f
+	return f
 end
 
--- BLACK HOLE
+local combat=page("Combat")
+local move=page("Movement")
+local void=page("Void")
 
-local BlackHole = Instance.new("Frame")
-BlackHole.Size = UDim2.fromOffset(92, 92)
-BlackHole.Position = UDim2.new(0.5, -46, 0.5, -46)
-BlackHole.BackgroundColor3 = Color3.new(0, 0, 0)
-BlackHole.BorderSizePixel = 0
-BlackHole.ZIndex = 2
-BlackHole.Parent = Space
-
-local BHCorner = Instance.new("UICorner")
-BHCorner.CornerRadius = UDim.new(1, 0)
-BHCorner.Parent = BlackHole
-
--- PURPLE DISTORTED DISK
-
-local Disk = Instance.new("Frame")
-Disk.Size = UDim2.fromOffset(175, 46)
-Disk.Position = UDim2.new(0.5, -87, 0.5, -23)
-Disk.BackgroundColor3 = PURPLE
-Disk.BackgroundTransparency = 0.35
-Disk.BorderSizePixel = 0
-Disk.Rotation = -12
-Disk.ZIndex = 1
-Disk.Parent = Space
-
-local DiskCorner = Instance.new("UICorner")
-DiskCorner.CornerRadius = UDim.new(1, 0)
-DiskCorner.Parent = Disk
-
-local DiskStroke = Instance.new("UIStroke")
-DiskStroke.Color = PURPLE2
-DiskStroke.Thickness = 3
-DiskStroke.Transparency = 0.15
-DiskStroke.Parent = Disk
-
--- SECTION BUTTON CREATOR
-
-local CurrentSection
-
-local function CreateSection(Name)
-	local Button = Instance.new("TextButton")
-
-	Button.Name = Name
-	Button.Size = UDim2.new(1, 0, 0, 33)
-	Button.BackgroundColor3 = DARK2
-	Button.Text = Name
-	Button.TextColor3 = Color3.fromRGB(190, 180, 205)
-	Button.TextSize = 11
-	Button.Font = Enum.Font.GothamMedium
-	Button.AutoButtonColor = false
-	Button.Parent = Sidebar
-
-	local Corner = Instance.new("UICorner")
-	Corner.CornerRadius = UDim.new(0, 6)
-	Corner.Parent = Button
-
-	local Stroke = Instance.new("UIStroke")
-	Stroke.Color = PURPLE
-	Stroke.Transparency = 1
-	Stroke.Parent = Button
-
-	Button.MouseEnter:Connect(function()
-		if CurrentSection ~= Name then
-			TweenService:Create(
-				Button,
-				TweenInfo.new(0.15),
-				{
-					BackgroundColor3 = Color3.fromRGB(27, 14, 40)
-				}
-			):Play()
-		end
-	end)
-
-	Button.MouseLeave:Connect(function()
-		if CurrentSection ~= Name then
-			TweenService:Create(
-				Button,
-				TweenInfo.new(0.15),
-				{
-					BackgroundColor3 = DARK2
-				}
-			):Play()
-		end
-	end)
-
-	return Button, Stroke
+local function section(n)
+	local b=Instance.new("TextButton",side)
+	b.Size=UDim2.new(1,-8,0,32)
+	b.Position=UDim2.fromOffset(4,0)
+	b.Text=n
+	b.TextSize=11
+	b.Font=Enum.Font.GothamMedium
+	b.TextColor3=white
+	b.BackgroundColor3=dark
+	b.AutoButtonColor=false
+	Instance.new("UICorner",b).CornerRadius=UDim.new(0,6)
+	return b
 end
 
-local CombatButton, CombatStroke = CreateSection("Combat")
-local MovementButton, MovementStroke = CreateSection("Movement")
-local VoidButton, VoidStroke = CreateSection("Void")
+local cb=section("Combat")
+local mb=section("Movement")
+local vb=section("Void")
 
--- PAGES
+local function show(n,b)
+	for _,p in pairs(pages) do p.Visible=false end
+	pages[n].Visible=true
+	for _,x in ipairs(side:GetChildren()) do
+		if x:IsA("TextButton") then x.BackgroundColor3=dark end
+	end
+	b.BackgroundColor3=Color3.fromRGB(38,15,60)
+end
 
-local function CreatePage(Name)
-	local Page = Instance.new("ScrollingFrame")
+cb.MouseButton1Click:Connect(function() show("Combat",cb) end)
+mb.MouseButton1Click:Connect(function() show("Movement",mb) end)
+vb.MouseButton1Click:Connect(function() show("Void",vb) end)
 
-	Page.Name = Name
-	Page.Size = UDim2.fromScale(1, 1)
-	Page.BackgroundTransparency = 1
-	Page.BorderSizePixel = 0
-	Page.ScrollBarThickness = 2
-	Page.ScrollBarImageColor3 = PURPLE
-	Page.Visible = false
-	Page.ZIndex = 5
-	Page.Parent = Content
+local function button(parent,text,fn)
+	local b=Instance.new("TextButton",parent)
+	b.Size=UDim2.new(1,-12,0,34)
+	b.BackgroundColor3=Color3.fromRGB(14,9,22)
+	b.Text=text
+	b.TextColor3=white
+	b.TextSize=11
+	b.Font=Enum.Font.GothamMedium
+	b.AutoButtonColor=false
+	Instance.new("UICorner",b).CornerRadius=UDim.new(0,6)
+	local s=Instance.new("UIStroke",b)
+	s.Color=purple
+	s.Transparency=.65
+	b.MouseEnter:Connect(function()
+		T:Create(s,TweenInfo.new(.15),{Transparency=.15}):Play()
+	end)
+	b.MouseLeave:Connect(function()
+		T:Create(s,TweenInfo.new(.15),{Transparency=.65}):Play()
+	end)
+	b.MouseButton1Click:Connect(function()
+		if fn then fn(b) end
+	end)
+	return b
+end
 
-	local Padding = Instance.new("UIPadding")
-	Padding.PaddingTop = UDim.new(0, 10)
-	Padding.PaddingLeft = UDim.new(0, 11)
-	Padding.PaddingRight = UDim.new(0, 11)
-	Padding.Parent = Page
+-- MOVEMENT
+local speed=false
+local noclip=false
+local infjump=false
+local flying=false
+local emperor=false
+local flySpeed=70
+local bv,bg
 
-	local Layout = Instance.new("UIListLayout")
-	Layout.Padding = UDim.new(0, 7)
-	Layout.Parent = Page
+button(move,"Speed: OFF",function(b)
+	speed=not speed
+	b.Text="Speed: "..(speed and "ON" or "OFF")
+end)
 
-	Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-		Page.CanvasSize = UDim2.fromOffset(
-			0,
-			Layout.AbsoluteContentSize.Y + 20
+button(move,"Infinite Jump: OFF",function(b)
+	infjump=not infjump
+	b.Text="Infinite Jump: "..(infjump and "ON" or "OFF")
+end)
+
+U.JumpRequest:Connect(function()
+	if infjump and hum then
+		hum:ChangeState(Enum.HumanoidStateType.Jumping)
+	end
+end)
+
+button(move,"Noclip: OFF",function(b)
+	noclip=not noclip
+	b.Text="Noclip: "..(noclip and "ON" or "OFF")
+end)
+
+-- MOBILE FLIGHT
+local function flight(on)
+	flying=on
+	if bv then bv:Destroy() bv=nil end
+	if bg then bg:Destroy() bg=nil end
+	if not on or not root then return end
+
+	bv=Instance.new("BodyVelocity",root)
+	bv.MaxForce=Vector3.new(1e6,1e6,1e6)
+	bv.Velocity=Vector3.zero
+
+	bg=Instance.new("BodyGyro",root)
+	bg.MaxTorque=Vector3.new(1e6,1e6,1e6)
+	bg.P=50000
+
+	R.RenderStepped:Connect(function()
+		if not flying or not bv or not root then return end
+
+		local m=hum.MoveDirection
+		local dir=Vector3.zero
+
+		if m.Magnitude>.01 then
+			dir=Vector3.new(m.X,0,m.Z)
+		end
+
+		if U:IsKeyDown(Enum.KeyCode.Space) then
+			dir+=Vector3.yAxis
+		end
+
+		if U:IsKeyDown(Enum.KeyCode.LeftShift) then
+			dir-=Vector3.yAxis
+		end
+
+		if dir.Magnitude>.01 then
+			dir=dir.Unit*flySpeed
+		end
+
+		bv.Velocity=dir
+		bg.CFrame=CFrame.lookAt(
+			root.Position,
+			root.Position+workspace.CurrentCamera.CFrame.LookVector
 		)
 	end)
-
-	return Page
 end
 
-local CombatPage = CreatePage("Combat")
-local MovementPage = CreatePage("Movement")
-local VoidPage = CreatePage("Void")
+button(move,"Void Flight: OFF",function(b)
+	flight(not flying)
+	b.Text="Void Flight: "..(flying and "ON" or "OFF")
+end)
 
-local function SwitchSection(Name, Button)
-	CurrentSection = Name
+-- VOID CORE
+local folder=workspace:FindFirstChild("NavyHubVoid")
+if folder then folder:Destroy() end
+folder=Instance.new("Folder",workspace)
+folder.Name="NavyHubVoid"
 
-	for _, Object in ipairs(Sidebar:GetChildren()) do
-		if Object:IsA("TextButton") then
-			TweenService:Create(
-				Object,
-				TweenInfo.new(0.15),
-				{
-					BackgroundColor3 = DARK2
-				}
-			):Play()
+local hole=Instance.new("Part",folder)
+hole.Shape=Enum.PartType.Ball
+hole.Size=Vector3.new(7,7,7)
+hole.Color=Color3.new(0,0,0)
+hole.Material=Enum.Material.SmoothPlastic
+hole.Anchored=true
+hole.CanCollide=false
 
-			local Stroke = Object:FindFirstChildOfClass("UIStroke")
+local light=Instance.new("PointLight",hole)
+light.Color=purple
+light.Brightness=2
+light.Range=15
 
-			if Stroke then
-				Stroke.Transparency = 1
-			end
-		end
-	end
+local ring=Instance.new("Part",folder)
+ring.Shape=Enum.PartType.Cylinder
+ring.Size=Vector3.new(.3,13,13)
+ring.Color=purple
+ring.Material=Enum.Material.Neon
+ring.Transparency=.2
+ring.Anchored=true
+ring.CanCollide=false
 
-	local SelectedStroke = Button:FindFirstChildOfClass("UIStroke")
+local function explosion(pos,size)
+	local p=Instance.new("Part",folder)
+	p.Shape=Enum.PartType.Ball
+	p.Size=Vector3.one
+	p.Color=purple
+	p.Material=Enum.Material.Neon
+	p.Transparency=.15
+	p.Anchored=true
+	p.CanCollide=false
+	p.Position=pos
 
-	TweenService:Create(
-		Button,
-		TweenInfo.new(0.18),
-		{
-			BackgroundColor3 = Color3.fromRGB(38, 17, 60)
-		}
-	):Play()
+	T:Create(p,TweenInfo.new(.65,Enum.EasingStyle.Quad),{
+		Size=Vector3.new(size,size,size),
+		Transparency=1
+	}):Play()
 
-	if SelectedStroke then
-		SelectedStroke.Transparency = 0.25
-	end
-
-	for _, Page in ipairs(Content:GetChildren()) do
-		if Page:IsA("ScrollingFrame") then
-			Page.Visible = Page.Name == Name
-		end
-	end
+	D:AddItem(p,.7)
 end
 
-CombatButton.MouseButton1Click:Connect(function()
-	SwitchSection("Combat", CombatButton)
-end)
+local time=0
+R.RenderStepped:Connect(function(dt)
+	time+=dt
+	local pos=root and root.Position or workspace.CurrentCamera.CFrame.Position
+	hole.Position=pos
+	ring.CFrame=CFrame.new(pos)*CFrame.Angles(math.rad(68),time*.4,0)
 
-MovementButton.MouseButton1Click:Connect(function()
-	SwitchSection("Movement", MovementButton)
-end)
-
-VoidButton.MouseButton1Click:Connect(function()
-	SwitchSection("Void", VoidButton)
-end)
-
--- TITLE ANIMATION
-
-task.spawn(function()
-	while Gui.Parent do
-		TweenService:Create(
-			TitleStroke,
-			TweenInfo.new(
-				2,
-				Enum.EasingStyle.Sine,
-				Enum.EasingDirection.InOut
-			),
-			{
-				Transparency = 0.05
-			}
-		):Play()
-
-		task.wait(2)
-
-		TweenService:Create(
-			TitleStroke,
-			TweenInfo.new(
-				2,
-				Enum.EasingStyle.Sine,
-				Enum.EasingDirection.InOut
-			),
-			{
-				Transparency = 0.55
-			}
-		):Play()
-
-		task.wait(2)
-	end
-end)
-
--- BLACK HOLE / DISK ANIMATION
-
-task.spawn(function()
-	local Time = 0
-
-	while Gui.Parent do
-		Time += 0.015
-
-		Disk.Rotation = -12 + math.sin(Time) * 4
-
-		local Scale = 1 + math.sin(Time * 2) * 0.025
-
-		Disk.Size = UDim2.fromOffset(
-			175 * Scale,
-			46 * Scale
-		)
-
-		task.wait()
-	end
-end)
-
--- CREDITS PANEL
-
-local CreditsPanel = Instance.new("Frame")
-CreditsPanel.Size = UDim2.fromOffset(190, 105)
-CreditsPanel.Position = UDim2.new(1, -198, 0, 30)
-CreditsPanel.BackgroundColor3 = DARK2
-CreditsPanel.BorderSizePixel = 0
-CreditsPanel.Visible = false
-CreditsPanel.ZIndex = 50
-CreditsPanel.Parent = Main
-
-local CreditsCorner2 = Instance.new("UICorner")
-CreditsCorner2.CornerRadius = UDim.new(0, 7)
-CreditsCorner2.Parent = CreditsPanel
-
-local CreditsStroke = Instance.new("UIStroke")
-CreditsStroke.Color = PURPLE
-CreditsStroke.Transparency = 0.25
-CreditsStroke.Parent = CreditsPanel
-
-local CreditsText = Instance.new("TextLabel")
-CreditsText.Size = UDim2.fromScale(1, 1)
-CreditsText.BackgroundTransparency = 1
-CreditsText.Text = "NAVY HUB\n\nXavier_navyblue\nCHATGPT"
-CreditsText.TextColor3 = TEXT
-CreditsText.TextSize = 12
-CreditsText.Font = Enum.Font.GothamMedium
-CreditsText.ZIndex = 51
-CreditsText.Parent = CreditsPanel
-
-Credits.MouseButton1Click:Connect(function()
-	CreditsPanel.Visible = not CreditsPanel.Visible
-end)
-
--- DRAG MAIN UI
-
-local Dragging = false
-local DragStart
-local StartPosition
-
-Header.InputBegan:Connect(function(Input)
-	if Input.UserInputType == Enum.UserInputType.MouseButton1
-		or Input.UserInputType == Enum.UserInputType.Touch then
-
-		Dragging = true
-		DragStart = Input.Position
-		StartPosition = Main.Position
-	end
-end)
-
-UserInputService.InputChanged:Connect(function(Input)
-	if not Dragging then
-		return
+	if speed and hum and not flying then
+		hum.WalkSpeed=100
+	elseif hum and not flying then
+		hum.WalkSpeed=16
 	end
 
-	if Input.UserInputType ~= Enum.UserInputType.MouseMovement
-		and Input.UserInputType ~= Enum.UserInputType.Touch then
-		return
-	end
-
-	local Delta = Input.Position - DragStart
-
-	Main.Position = UDim2.new(
-		StartPosition.X.Scale,
-		StartPosition.X.Offset + Delta.X,
-		StartPosition.Y.Scale,
-		StartPosition.Y.Offset + Delta.Y
-	)
-end)
-
-UserInputService.InputEnded:Connect(function(Input)
-	if Input.UserInputType == Enum.UserInputType.MouseButton1
-		or Input.UserInputType == Enum.UserInputType.Touch then
-
-		Dragging = false
-	end
-end)
-
--- DEFAULT PAGE
-
-SwitchSection("Movement", MovementButton)
-
-print("NAVY HUB UI CORE LOADED")
-
--- NAVY HUB BETA
--- PART 2/3
--- MOVEMENT + VOID SYSTEMS
-
-local Character
-local Humanoid
-local Root
-
-local function RefreshCharacter()
-	Character = Player.Character or Player.CharacterAdded:Wait()
-	Humanoid = Character:WaitForChild("Humanoid")
-	Root = Character:WaitForChild("HumanoidRootPart")
-end
-
-RefreshCharacter()
-
-Player.CharacterAdded:Connect(function()
-	task.wait(0.5)
-	RefreshCharacter()
-end)
-
---==================================================
--- BUTTON CREATOR
---==================================================
-
-local function CreateFeatureButton(Page, Text, Callback)
-	local Button = Instance.new("TextButton")
-
-	Button.Size = UDim2.new(1, -5, 0, 37)
-	Button.BackgroundColor3 = Color3.fromRGB(15, 10, 24)
-	Button.BorderSizePixel = 0
-	Button.Text = Text
-	Button.TextColor3 = TEXT
-	Button.TextSize = 12
-	Button.Font = Enum.Font.GothamMedium
-	Button.AutoButtonColor = false
-	Button.ZIndex = 10
-	Button.Parent = Page
-
-	local Corner = Instance.new("UICorner")
-	Corner.CornerRadius = UDim.new(0, 7)
-	Corner.Parent = Button
-
-	local Glow = Instance.new("UIStroke")
-	Glow.Color = PURPLE
-	Glow.Transparency = 0.65
-	Glow.Thickness = 1
-	Glow.Parent = Button
-
-	Button.MouseEnter:Connect(function()
-		TweenService:Create(
-			Button,
-			TweenInfo.new(0.15),
-			{
-				BackgroundColor3 = Color3.fromRGB(30, 15, 45)
-			}
-		):Play()
-
-		TweenService:Create(
-			Glow,
-			TweenInfo.new(0.15),
-			{
-				Transparency = 0.15
-			}
-		):Play()
-	end)
-
-	Button.MouseLeave:Connect(function()
-		TweenService:Create(
-			Button,
-			TweenInfo.new(0.15),
-			{
-				BackgroundColor3 = Color3.fromRGB(15, 10, 24)
-			}
-		):Play()
-
-		TweenService:Create(
-			Glow,
-			TweenInfo.new(0.15),
-			{
-				Transparency = 0.65
-			}
-		):Play()
-	end)
-
-	Button.MouseButton1Click:Connect(function()
-		TweenService:Create(
-			Button,
-			TweenInfo.new(0.08),
-			{
-				Size = UDim2.new(1, -11, 0, 34)
-			}
-		):Play()
-
-		task.delay(0.09, function()
-			if Button.Parent then
-				TweenService:Create(
-					Button,
-					TweenInfo.new(0.1),
-					{
-						Size = UDim2.new(1, -5, 0, 37)
-					}
-				):Play()
-			end
-		end)
-
-		if Callback then
-			Callback(Button)
-		end
-	end)
-
-	return Button
-end
-
---==================================================
--- SPEED
---==================================================
-
-local SpeedEnabled = false
-local SpeedValue = 100
-
-local SpeedButton = CreateFeatureButton(
-	MovementPage,
-	"Speed: OFF",
-	function(Button)
-
-		SpeedEnabled = not SpeedEnabled
-
-		Button.Text =
-			"Speed: " ..
-			(SpeedEnabled and "ON" or "OFF")
-	end
-)
-
---==================================================
--- INFINITE JUMP
---==================================================
-
-local InfiniteJump = false
-
-local JumpButton = CreateFeatureButton(
-	MovementPage,
-	"Infinite Jump: OFF",
-	function(Button)
-
-		InfiniteJump = not InfiniteJump
-
-		Button.Text =
-			"Infinite Jump: " ..
-			(InfiniteJump and "ON" or "OFF")
-	end
-)
-
-UserInputService.JumpRequest:Connect(function()
-	if InfiniteJump and Humanoid then
-		Humanoid:ChangeState(
-			Enum.HumanoidStateType.Jumping
-		)
-	end
-end)
-
---==================================================
--- NOCLIP
---==================================================
-
-local Noclip = false
-
-local NoclipButton = CreateFeatureButton(
-	MovementPage,
-	"Noclip: OFF",
-	function(Button)
-
-		Noclip = not Noclip
-
-		Button.Text =
-			"Noclip: " ..
-			(Noclip and "ON" or "OFF")
-	end
-)
-
---==================================================
--- VOID FLIGHT
---==================================================
-
-local Flying = false
-local FlySpeed = 75
-
-local FlyVelocity
-local FlyGyro
-local FlyConnection
-
-local function StopVoidFlight()
-	Flying = false
-
-	if FlyConnection then
-		FlyConnection:Disconnect()
-		FlyConnection = nil
-	end
-
-	if FlyVelocity then
-		FlyVelocity:Destroy()
-		FlyVelocity = nil
-	end
-
-	if FlyGyro then
-		FlyGyro:Destroy()
-		FlyGyro = nil
-	end
-
-	if Humanoid then
-		Humanoid.PlatformStand = false
-	end
-end
-
-local function StartVoidFlight()
-
-	if not Root or not Humanoid then
-		return
-	end
-
-	Flying = true
-
-	FlyVelocity = Instance.new("BodyVelocity")
-	FlyVelocity.Name = "NavyVoidFlightVelocity"
-	FlyVelocity.MaxForce = Vector3.new(
-		1000000,
-		1000000,
-		1000000
-	)
-	FlyVelocity.Velocity = Vector3.zero
-	FlyVelocity.Parent = Root
-
-	FlyGyro = Instance.new("BodyGyro")
-	FlyGyro.Name = "NavyVoidFlightGyro"
-	FlyGyro.MaxTorque = Vector3.new(
-		1000000,
-		1000000,
-		1000000
-	)
-	FlyGyro.P = 50000
-	FlyGyro.CFrame = Root.CFrame
-	FlyGyro.Parent = Root
-
-	FlyConnection = RunService.RenderStepped:Connect(function()
-
-		if not Flying or not Root then
-			return
-		end
-
-		local Direction = Vector3.zero
-
-		if UserInputService:IsKeyDown(
-			Enum.KeyCode.W
-		) then
-			Direction += Camera.CFrame.LookVector
-		end
-
-		if UserInputService:IsKeyDown(
-			Enum.KeyCode.S
-		) then
-			Direction -= Camera.CFrame.LookVector
-		end
-
-		if UserInputService:IsKeyDown(
-			Enum.KeyCode.A
-		) then
-			Direction -= Camera.CFrame.RightVector
-		end
-
-		if UserInputService:IsKeyDown(
-			Enum.KeyCode.D
-		) then
-			Direction += Camera.CFrame.RightVector
-		end
-
-		if UserInputService:IsKeyDown(
-			Enum.KeyCode.Space
-		) then
-			Direction += Vector3.yAxis
-		end
-
-		if UserInputService:IsKeyDown(
-			Enum.KeyCode.LeftShift
-		) then
-			Direction -= Vector3.yAxis
-		end
-
-		if Direction.Magnitude > 0 then
-			Direction =
-				Direction.Unit * FlySpeed
-		end
-
-		FlyVelocity.Velocity = Direction
-		FlyGyro.CFrame = Camera.CFrame
-	end)
-end
-
-local FlightButton = CreateFeatureButton(
-	MovementPage,
-	"Void Flight: OFF",
-	function(Button)
-
-		if Flying then
-
-			StopVoidFlight()
-
-			Button.Text =
-				"Void Flight: OFF"
-
-		else
-
-			StartVoidFlight()
-
-			Button.Text =
-				"Void Flight: ON"
-
-			-- Bigger Void activation visual
-			CreateVoidExplosion(
-				UDim2.fromScale(0.5, 0.5),
-				230
-			)
-		end
-	end
-)
-
---==================================================
--- MOVEMENT LOOP
---==================================================
-
-RunService.Stepped:Connect(function()
-
-	if Character then
-
-		for _, Object in ipairs(
-			Character:GetDescendants()
-		) do
-
-			if Object:IsA("BasePart") then
-				Object.CanCollide = not Noclip
-			end
-		end
-	end
-
-	if Humanoid then
-
-		if SpeedEnabled and not Flying then
-			Humanoid.WalkSpeed = SpeedValue
-
-		elseif not Flying then
-			Humanoid.WalkSpeed = 16
+	if noclip and char then
+		for _,p in ipairs(char:GetDescendants()) do
+			if p:IsA("BasePart") then p.CanCollide=false end
 		end
 	end
 end)
 
---==================================================
--- VOID EXPLOSION
---==================================================
-
-function CreateVoidExplosion(Position, Size)
-
-	local Ring = Instance.new("Frame")
-
-	Ring.AnchorPoint =
-		Vector2.new(0.5, 0.5)
-
-	Ring.Position =
-		Position or
-		UDim2.fromScale(0.5, 0.5)
-
-	Ring.Size =
-		UDim2.fromOffset(20, 20)
-
-	Ring.BackgroundTransparency = 1
-	Ring.BorderSizePixel = 0
-	Ring.ZIndex = 30
-	Ring.Parent = Space
-
-	local Corner = Instance.new("UICorner")
-	Corner.CornerRadius =
-		UDim.new(1, 0)
-	Corner.Parent = Ring
-
-	local Glow = Instance.new("UIStroke")
-	Glow.Color = PURPLE2
-	Glow.Thickness = 5
-	Glow.Transparency = 0.05
-	Glow.Parent = Ring
-
-	local TargetSize =
-		Size or 300
-
-	TweenService:Create(
-		Ring,
-		TweenInfo.new(
-			0.9,
-			Enum.EasingStyle.Quad,
-			Enum.EasingDirection.Out
-		),
-		{
-			Size =
-				UDim2.fromOffset(
-					TargetSize,
-					TargetSize
-				)
-		}
-	):Play()
-
-	TweenService:Create(
-		Glow,
-		TweenInfo.new(
-			0.9,
-			Enum.EasingStyle.Quad,
-			Enum.EasingDirection.Out
-		),
-		{
-			Transparency = 1
-		}
-	):Play()
-
-	task.delay(0.95, function()
-
-		if Ring then
-			Ring:Destroy()
-		end
-	end)
-end
-
---==================================================
--- VOID EXPLOSION BUTTON
---==================================================
-
-CreateFeatureButton(
-	VoidPage,
-	"Void Explosion",
-	function()
-
-		CreateVoidExplosion(
-			UDim2.fromScale(
-				0.5,
-				0.5
-			),
-			300
-		)
-
-	end
-)
-
---==================================================
--- VOID EMPEROR
---==================================================
-
-local VoidEmperor = false
-local Afterimages = true
-
-local EmperorButton = CreateFeatureButton(
-	VoidPage,
-	"Void Emperor: OFF",
-	function(Button)
-
-		VoidEmperor =
-			not VoidEmperor
-
-		Button.Text =
-			"Void Emperor: " ..
-			(VoidEmperor and "ON" or "OFF")
-
-		if VoidEmperor then
-
-			CreateVoidExplosion(
-				UDim2.fromScale(
-					0.5,
-					0.5
-				),
-				210
-			)
-		end
-	end
-)
-
---==================================================
--- VOID AFTERIMAGE
---==================================================
-
-local LastAfterimage = 0
-
-local function CreateVoidAfterimage()
-
-	if not VoidEmperor then
-		return
-	end
-
-	if not Afterimages then
-		return
-	end
-
-	if not Character then
-		return
-	end
-
-	if os.clock() - LastAfterimage < 0.14 then
-		return
-	end
-
-	LastAfterimage = os.clock()
-
-	local Ghost = Instance.new("Model")
-	Ghost.Name = "NavyVoidAfterimage"
-
-	for _, Object in ipairs(
-		Character:GetChildren()
-	) do
-
-		if Object:IsA("BasePart")
-			and Object.Name ~= "HumanoidRootPart" then
-
-			local Clone = Object:Clone()
-
-			for _, Child in ipairs(
-				Clone:GetDescendants()
-			) do
-
-				if Child:IsA("Script")
-					or Child:IsA("LocalScript")
-					or Child:IsA("ModuleScript") then
-
-					Child:Destroy()
-
-				elseif Child:IsA("Decal") then
-					Child.Transparency = 1
-				end
-			end
-
-			Clone.Anchored = true
-			Clone.CanCollide = false
-			Clone.Material = Enum.Material.Neon
-			Clone.Color = PURPLE
-			Clone.Transparency = 0.58
-			Clone.Parent = Ghost
-		end
-	end
-
-	Ghost.Parent = workspace
-
-	for _, Part in ipairs(
-		Ghost:GetDescendants()
-	) do
-
-		if Part:IsA("BasePart") then
-
-			TweenService:Create(
-				Part,
-				TweenInfo.new(
-					0.35,
-					Enum.EasingStyle.Sine
-				),
-				{
-					Transparency = 1
-				}
-			):Play()
-		end
-	end
-
-	task.delay(0.4, function()
-
-		if Ghost then
-			Ghost:Destroy()
-		end
-	end)
-end
-
-RunService.RenderStepped:Connect(function()
-
-	if VoidEmperor then
-		CreateVoidAfterimage()
-	end
+-- VOID
+button(void,"Void Emperor: OFF",function(b)
+	emperor=not emperor
+	b.Text="Void Emperor: "..(emperor and "ON" or "OFF")
+	if emperor and root then explosion(root.Position,10) end
 end)
 
---==================================================
--- VOID FLIGHT VISUAL TRAIL
---==================================================
-
-local LastFlightEffect = 0
-
-local function CreateFlightTrail()
-
-	if not Flying then
-		return
-	end
-
-	if not Root then
-		return
-	end
-
-	if os.clock() - LastFlightEffect < 0.08 then
-		return
-	end
-
-	LastFlightEffect = os.clock()
-
-	local Orb = Instance.new("Part")
-
-	Orb.Shape = Enum.PartType.Ball
-	Orb.Size = Vector3.new(
-		0.35,
-		0.35,
-		0.35
-	)
-
-	Orb.Material = Enum.Material.Neon
-	Orb.Color = PURPLE
-	Orb.Transparency = 0.25
-	Orb.CanCollide = false
-	Orb.Anchored = true
-	Orb.CFrame =
-		Root.CFrame *
-		CFrame.new(
-			math.random(-2, 2) / 3,
-			math.random(-2, 2) / 3,
-			math.random(1, 3)
-		)
-
-	Orb.Parent = workspace
-
-	TweenService:Create(
-		Orb,
-		TweenInfo.new(
-			0.35,
-			Enum.EasingStyle.Sine
-		),
-		{
-			Transparency = 1,
-			Size = Vector3.new(
-				0.05,
-				0.05,
-				0.05
-			)
-		}
-	):Play()
-
-	task.delay(0.4, function()
-
-		if Orb then
-			Orb:Destroy()
-		end
-	end)
-end
-
-RunService.RenderStepped:Connect(function()
-
-	if Flying then
-		CreateFlightTrail()
-	end
+button(void,"Void Explosion",function()
+	if root then explosion(root.Position+workspace.CurrentCamera.CFrame.LookVector*6,18) end
 end)
 
-print("NAVY HUB MOVEMENT + VOID LOADED")
+-- COMBAT UI HOOKS
+button(combat,"Auto Farm: OFF",function(b)
+	local on=b.Text:find("OFF")~=nil
+	b.Text="Auto Farm: "..(on and "ON" or "OFF")
+end)
 
--- NAVY HUB BETA
--- PART 3/3
--- COMBAT UI + MINIMIZE + FINAL EFFECTS
+button(combat,"M1 Attack",function() end)
+button(combat,"Q / E / R / G",function() end)
 
---==================================================
--- COMBAT SECTION
---==================================================
+-- AFTERIMAGES
+local last=0
+R.RenderStepped:Connect(function()
+	if not emperor or not char or os.clock()-last<.18 then return end
+	last=os.clock()
 
-local AutoFarmEnabled = false
+	local g=Instance.new("Model",folder)
 
-local AutoFarmButton = CreateFeatureButton(
-	CombatPage,
-	"Auto Farm: OFF",
-	function(Button)
-
-		AutoFarmEnabled = not AutoFarmEnabled
-
-		Button.Text =
-			"Auto Farm: " ..
-			(AutoFarmEnabled and "ON" or "OFF")
-
-		-- This is intentionally only a UI state.
-		-- Connect it to your own game's server-side
-		-- admin combat system.
+	for _,p in ipairs(char:GetChildren()) do
+		if p:IsA("BasePart") and p.Name~="HumanoidRootPart" then
+			local c=p:Clone()
+			c.Anchored=true
+			c.CanCollide=false
+			c.Material=Enum.Material.Neon
+			c.Color=purple
+			c.Transparency=.6
+			c.Parent=g
+			T:Create(c,TweenInfo.new(.35),{Transparency=1}):Play()
+		end
 	end
-)
 
-CreateFeatureButton(
-	CombatPage,
-	"M1 Attack",
-	function()
+	D:AddItem(g,.4)
+end)
 
-		-- Connect this to your own game's
-		-- server-authoritative combat RemoteEvent.
-	end
-)
-
-CreateFeatureButton(
-	CombatPage,
-	"Q / E / R / G",
-	function()
-
-		-- Connect this to your own game's
-		-- server-authoritative ability system.
-	end
-)
-
---==================================================
 -- MINIMIZE ICON
---==================================================
+local mini=Instance.new("TextButton",G)
+mini.Size=UDim2.fromOffset(52,52)
+mini.Position=UDim2.new(0,15,.5,-26)
+mini.Text="N"
+mini.TextColor3=white
+mini.TextSize=20
+mini.Font=Enum.Font.GothamBold
+mini.BackgroundColor3=dark
+mini.Visible=false
+Instance.new("UICorner",mini).CornerRadius=UDim.new(1,0)
 
-local Minimized = false
+local miniStroke=Instance.new("UIStroke",mini)
+miniStroke.Color=purple
+miniStroke.Thickness=2
 
-local Mini = Instance.new("TextButton")
+local minimized=false
 
-Mini.Name = "NavyHubIcon"
-Mini.Size = UDim2.fromOffset(52, 52)
-Mini.Position = UDim2.new(
-	0,
-	18,
-	0.5,
-	-26
-)
+local function minimize()
+	minimized=true
+	M.Visible=false
+	mini.Visible=true
+end
 
-Mini.BackgroundColor3 = DARK
-Mini.BorderSizePixel = 0
-Mini.Text = "N"
-Mini.TextColor3 = TEXT
-Mini.TextSize = 21
-Mini.Font = Enum.Font.GothamBold
-Mini.AutoButtonColor = false
-Mini.Visible = false
-Mini.ZIndex = 100
-Mini.Parent = Gui
+local function restore()
+	minimized=false
+	M.Visible=true
+	mini.Visible=false
+end
 
-local MiniCorner = Instance.new("UICorner")
-MiniCorner.CornerRadius = UDim.new(1, 0)
-MiniCorner.Parent = Mini
+mini.MouseButton1Click:Connect(restore)
 
-local MiniStroke = Instance.new("UIStroke")
-MiniStroke.Color = PURPLE
-MiniStroke.Thickness = 2
-MiniStroke.Transparency = 0.2
-MiniStroke.Parent = Mini
+local clicks=0
+title.InputBegan:Connect(function(i)
+	if i.UserInputType==Enum.UserInputType.MouseButton1 then
+		clicks+=1
+		if clicks>=2 then
+			minimize()
+			clicks=0
+		end
+		task.delay(.4,function() clicks=0 end)
+	end
+end)
 
---==================================================
--- MINIMIZE ICON ANIMATION
---==================================================
+-- DRAG MAIN
+local drag=false
+local ds,sp
 
+title.InputBegan:Connect(function(i)
+	if i.UserInputType==Enum.UserInputType.MouseButton1
+	or i.UserInputType==Enum.UserInputType.Touch then
+		drag=true
+		ds=i.Position
+		sp=M.Position
+	end
+end)
+
+U.InputChanged:Connect(function(i)
+	if drag and (i.UserInputType==Enum.UserInputType.MouseMovement
+	or i.UserInputType==Enum.UserInputType.Touch) then
+		local d=i.Position-ds
+		M.Position=UDim2.new(
+			sp.X.Scale,sp.X.Offset+d.X,
+			sp.Y.Scale,sp.Y.Offset+d.Y
+		)
+	end
+end)
+
+U.InputEnded:Connect(function(i)
+	if i.UserInputType==Enum.UserInputType.MouseButton1
+	or i.UserInputType==Enum.UserInputType.Touch then
+		drag=false
+	end
+end)
+
+-- ICON ANIMATION
 task.spawn(function()
-
-	while Gui.Parent do
-
-		TweenService:Create(
-			MiniStroke,
-			TweenInfo.new(
-				1.3,
-				Enum.EasingStyle.Sine,
-				Enum.EasingDirection.InOut
-			),
-			{
-				Thickness = 3,
-				Transparency = 0.05
-			}
-		):Play()
-
-		TweenService:Create(
-			Mini,
-			TweenInfo.new(
-				1.3,
-				Enum.EasingStyle.Sine,
-				Enum.EasingDirection.InOut
-			),
-			{
-				Rotation = 4
-			}
-		):Play()
-
-		task.wait(1.3)
-
-		TweenService:Create(
-			MiniStroke,
-			TweenInfo.new(
-				1.3,
-				Enum.EasingStyle.Sine,
-				Enum.EasingDirection.InOut
-			),
-			{
-				Thickness = 2,
-				Transparency = 0.35
-			}
-		):Play()
-
-		TweenService:Create(
-			Mini,
-			TweenInfo.new(
-				1.3,
-				Enum.EasingStyle.Sine,
-				Enum.EasingDirection.InOut
-			),
-			{
-				Rotation = -4
-			}
-		):Play()
-
-		task.wait(1.3)
+	while G.Parent do
+		T:Create(miniStroke,TweenInfo.new(1),{
+			Thickness=3,
+			Transparency=.05
+		}):Play()
+		T:Create(title,TweenInfo.new(1),{
+			TextColor3=Color3.fromRGB(255,245,255)
+		}):Play()
+		task.wait(1)
+		T:Create(miniStroke,TweenInfo.new(1),{
+			Thickness=2,
+			Transparency=.35
+		}):Play()
+		task.wait(1)
 	end
 end)
 
---==================================================
--- MINIMIZE / RESTORE
---==================================================
+-- CREDITS
+local credits=Instance.new("TextLabel",M)
+credits.Size=UDim2.fromOffset(180,65)
+credits.Position=UDim2.new(1,-190,0,30)
+credits.BackgroundColor3=dark
+credits.Text="Navy Hub\nXavier_navyblue • ChatGPT"
+credits.TextColor3=white
+credits.TextSize=10
+credits.Visible=false
+credits.ZIndex=20
+Instance.new("UICorner",credits).CornerRadius=UDim.new(0,6)
 
-local function MinimizeHub()
-
-	Minimized = true
-
-	CreditsPanel.Visible = false
-
-	Main.Visible = false
-	Mini.Visible = true
-
-	TweenService:Create(
-		Mini,
-		TweenInfo.new(
-			0.25,
-			Enum.EasingStyle.Back,
-			Enum.EasingDirection.Out
-		),
-		{
-			Size = UDim2.fromOffset(
-				58,
-				58
-			)
-		}
-	):Play()
-
-	task.delay(0.25, function()
-
-		if Mini.Parent then
-
-			TweenService:Create(
-				Mini,
-				TweenInfo.new(0.2),
-				{
-					Size = UDim2.fromOffset(
-						52,
-						52
-					)
-				}
-			):Play()
-		end
-	end)
-end
-
-local function RestoreHub()
-
-	Minimized = false
-
-	Mini.Visible = false
-	Main.Visible = true
-
-	Main.Size =
-		UDim2.fromOffset(
-			500,
-			315
-		)
-
-	TweenService:Create(
-		Main,
-		TweenInfo.new(
-			0.25,
-			Enum.EasingStyle.Back,
-			Enum.EasingDirection.Out
-		),
-		{
-			Size =
-				UDim2.fromOffset(
-					520,
-					330
-				)
-		}
-	):Play()
-end
-
-Mini.MouseButton1Click:Connect(function()
-
-	if Minimized then
-		RestoreHub()
-	end
+gear.MouseButton1Click:Connect(function()
+	credits.Visible=not credits.Visible
 end)
 
---==================================================
--- DOUBLE-CLICK HEADER TO MINIMIZE
---==================================================
+-- DEFAULT
+show("Movement",mb)
 
-local LastClick = 0
-
-Header.InputBegan:Connect(function(Input)
-
-	if Input.UserInputType ~=
-		Enum.UserInputType.MouseButton1 then
-		return
-	end
-
-	local Now = os.clock()
-
-	if Now - LastClick < 0.35 then
-		MinimizeHub()
-	end
-
-	LastClick = Now
-end)
-
---==================================================
--- DRAG MINIMIZE ICON
---==================================================
-
-local MiniDragging = false
-local MiniDragStart
-local MiniStartPosition
-
-Mini.InputBegan:Connect(function(Input)
-
-	if Input.UserInputType ==
-		Enum.UserInputType.MouseButton1
-		or Input.UserInputType ==
-		Enum.UserInputType.Touch then
-
-		MiniDragging = true
-		MiniDragStart = Input.Position
-		MiniStartPosition = Mini.Position
-	end
-end)
-
-UserInputService.InputChanged:Connect(function(Input)
-
-	if not MiniDragging then
-		return
-	end
-
-	if Input.UserInputType ~=
-		Enum.UserInputType.MouseMovement
-		and Input.UserInputType ~=
-		Enum.UserInputType.Touch then
-		return
-	end
-
-	local Delta =
-		Input.Position -
-		MiniDragStart
-
-	Mini.Position = UDim2.new(
-		MiniStartPosition.X.Scale,
-		MiniStartPosition.X.Offset +
-			Delta.X,
-
-		MiniStartPosition.Y.Scale,
-		MiniStartPosition.Y.Offset +
-			Delta.Y
-	)
-end)
-
-UserInputService.InputEnded:Connect(function(Input)
-
-	if Input.UserInputType ==
-		Enum.UserInputType.MouseButton1
-		or Input.UserInputType ==
-		Enum.UserInputType.Touch then
-
-		MiniDragging = false
-	end
-end)
-
---==================================================
--- ELECTRIC VOID EVENT
--- 30-40 SECOND INTERVAL
---==================================================
-
-local function ElectricEvent()
-
-	if not Space or not Space.Parent then
-		return
-	end
-
-	local Electric = Instance.new("Frame")
-
-	Electric.Size =
-		UDim2.fromScale(
-			1,
-			1
-		)
-
-	Electric.BackgroundColor3 =
-		PURPLE
-
-	Electric.BackgroundTransparency =
-		0.94
-
-	Electric.BorderSizePixel = 0
-	Electric.ZIndex = 4
-	Electric.Parent = Space
-
-	local ElectricStroke =
-		Instance.new("UIStroke")
-
-	ElectricStroke.Color =
-		PURPLE2
-
-	ElectricStroke.Transparency =
-		0.35
-
-	ElectricStroke.Thickness =
-		1
-
-	ElectricStroke.Parent =
-		Electric
-
-	TweenService:Create(
-		Electric,
-		TweenInfo.new(
-			0.9,
-			Enum.EasingStyle.Sine,
-			Enum.EasingDirection.Out
-		),
-		{
-			BackgroundTransparency = 1
-		}
-	):Play()
-
-	TweenService:Create(
-		ElectricStroke,
-		TweenInfo.new(
-			0.9,
-			Enum.EasingStyle.Sine,
-			Enum.EasingDirection.Out
-		),
-		{
-			Transparency = 1
-		}
-	):Play()
-
-	task.delay(
-		1,
-		function()
-
-			if Electric then
-				Electric:Destroy()
-			end
-		end
-	)
-end
-
-task.spawn(function()
-
-	while Gui.Parent do
-
-		task.wait(
-			math.random(
-				30,
-				40
-			)
-		)
-
-		if Gui.Parent then
-			ElectricEvent()
-		end
-	end
-end)
-
---==================================================
--- BUTTON VOID ENERGY
---==================================================
-
-local function AddVoidPulse(Button)
-
-	local Pulse =
-		Instance.new("Frame")
-
-	Pulse.AnchorPoint =
-		Vector2.new(
-			0.5,
-			0.5
-		)
-
-	Pulse.Position =
-		UDim2.fromScale(
-			0.5,
-			0.5
-		)
-
-	Pulse.Size =
-		UDim2.fromOffset(
-			5,
-			5
-		)
-
-	Pulse.BackgroundColor3 =
-		PURPLE
-
-	Pulse.BackgroundTransparency =
-		0.45
-
-	Pulse.BorderSizePixel =
-		0
-
-	Pulse.ZIndex =
-		Button.ZIndex - 1
-
-	Pulse.Parent =
-		Button
-
-	local Corner =
-		Instance.new("UICorner")
-
-	Corner.CornerRadius =
-		UDim.new(
-			1,
-			0
-		)
-
-	Corner.Parent =
-		Pulse
-
-	TweenService:Create(
-		Pulse,
-		TweenInfo.new(
-			0.5,
-			Enum.EasingStyle.Quad,
-			Enum.EasingDirection.Out
-		),
-		{
-			Size =
-				UDim2.fromScale(
-					1.1,
-					1.8
-				),
-
-			BackgroundTransparency =
-				1
-		}
-	):Play()
-
-	task.delay(
-		0.55,
-		function()
-
-			if Pulse then
-				Pulse:Destroy()
-			end
-		end
-	)
-end
-
--- Add pulse to feature buttons
-
-for _, Page in ipairs({
-	CombatPage,
-	MovementPage,
-	VoidPage
-}) do
-
-	for _, Object in ipairs(
-		Page:GetChildren()
-	) do
-
-		if Object:IsA("TextButton") then
-
-			Object.MouseButton1Click:Connect(
-				function()
-					AddVoidPulse(Object)
-				end
-			)
-		end
-	end
-end
-
---==================================================
--- VOID FLIGHT LANDING / START EFFECT
---==================================================
-
-local PreviousFlying = false
-
-RunService.RenderStepped:Connect(function()
-
-	if Flying and not PreviousFlying then
-
-		CreateVoidExplosion(
-			UDim2.fromScale(
-				0.5,
-				0.5
-			),
-			240
-		)
-
-	end
-
-	if not Flying and PreviousFlying then
-
-		CreateVoidExplosion(
-			UDim2.fromScale(
-				0.5,
-				0.5
-			),
-			150
-		)
-
-	end
-
-	PreviousFlying = Flying
-end)
-
---==================================================
--- VOID EMPEROR EXTRA MOTION
---==================================================
-
-local EmperorTime = 0
-
-RunService.RenderStepped:Connect(function(
-	DeltaTime
-)
-
-	if not VoidEmperor then
-		return
-	end
-
-	EmperorTime +=
-	DeltaTime
-
-	if not Character or not Root then
-		return
-	end
-
-	-- Subtle visual camera-independent
-	-- energy motion around the character.
-
-	local Position =
-		Root.Position +
-		Vector3.new(
-			math.cos(
-				EmperorTime * 3
-			) * 2,
-
-			math.sin(
-				EmperorTime * 4
-			) * 1.2,
-
-			math.sin(
-				EmperorTime * 3
-			) * 2
-		)
-
-	if math.random() < 0.035 then
-
-		local Orb =
-			Instance.new("Part")
-
-		Orb.Shape =
-			Enum.PartType.Ball
-
-		Orb.Size =
-			Vector3.new(
-				0.18,
-				0.18,
-				0.18
-			)
-
-		Orb.Material =
-			Enum.Material.Neon
-
-		Orb.Color =
-			PURPLE
-
-		Orb.Transparency =
-			0.2
-
-		Orb.Anchored =
-			true
-
-		Orb.CanCollide =
-			false
-
-		Orb.Position =
-			Position
-
-		Orb.Parent =
-			workspace
-
-		TweenService:Create(
-			Orb,
-			TweenInfo.new(
-				0.5,
-				Enum.EasingStyle.Sine
-			),
-			{
-				Transparency = 1,
-
-				Size =
-					Vector3.new(
-						0.03,
-						0.03,
-						0.03
-					)
-			}
-		):Play()
-
-		task.delay(
-			0.55,
-			function()
-
-				if Orb then
-					Orb:Destroy()
-				end
-			end
-		)
-	end
-end)
-
---==================================================
--- CLEANUP
---==================================================
-
-Gui.Destroying:Connect(function()
-
-	if Flying then
-		StopVoidFlight()
-	end
-end)
-
---==================================================
--- FINAL MESSAGE
---==================================================
-
-print(
-	"NAVY HUB BETA - ALL 3 PARTS LOADED"
-)
-
-print(
-	"UI / MOVEMENT / VOID / COMBAT UI READY"
-)
-
-print(
-	"Admin combat actions should be connected"
-	.. " to your own server-side systems."
-)
+print("NAVY HUB BETA LOADED")
