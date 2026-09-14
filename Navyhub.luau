@@ -7461,3 +7461,296 @@ if shared.VapeExecuted then
 
 	return GuiLibrary
 end
+
+--// NAVY HUB FEATURES
+--// No UI creation included.
+--// Uses your existing buttons.
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local Player = Players.LocalPlayer
+
+local Character
+local Humanoid
+local RootPart
+
+local NoClipEnabled = false
+local InfiniteJumpEnabled = false
+local VoidEmperorEnabled = false
+local VoidFlightEnabled = false
+local VoidAbilityEnabled = false
+
+local NORMAL_WALKSPEED = 16
+local VOID_EMPEROR_SPEED = 24
+
+-- Flight speed
+local FLIGHT_SPEED = 60
+
+local FlightConnection
+
+--// CHARACTER SETUP
+
+local function SetupCharacter(Char)
+    Character = Char
+    Humanoid = Char:WaitForChild("Humanoid")
+    RootPart = Char:WaitForChild("HumanoidRootPart")
+end
+
+if Player.Character then
+    SetupCharacter(Player.Character)
+end
+
+Player.CharacterAdded:Connect(function(Char)
+    SetupCharacter(Char)
+
+    if VoidFlightEnabled then
+        task.wait(0.2)
+
+        if FlightConnection then
+            FlightConnection:Disconnect()
+            FlightConnection = nil
+        end
+
+        StartVoidFlight()
+    end
+end)
+
+--// BUTTON STATE HELPER
+--// Your existing UI buttons should call this when toggled.
+
+local function SetButtonState(Button, Name, Enabled)
+    if not Button then
+        return
+    end
+
+    Button.Text = Name .. (Enabled and " [ON]" or " [OFF]")
+end
+
+--// NOCLIP
+
+local function ToggleNoClip(Button)
+    NoClipEnabled = not NoClipEnabled
+
+    SetButtonState(
+        Button,
+        "NoClip",
+        NoClipEnabled
+    )
+end
+
+RunService.Stepped:Connect(function()
+    if not NoClipEnabled or not Character then
+        return
+    end
+
+    for _, Object in ipairs(Character:GetDescendants()) do
+        if Object:IsA("BasePart") then
+            Object.CanCollide = false
+        end
+    end
+end)
+
+--// INFINITE JUMP
+
+local function ToggleInfiniteJump(Button)
+    InfiniteJumpEnabled = not InfiniteJumpEnabled
+
+    SetButtonState(
+        Button,
+        "Infinite Jump",
+        InfiniteJumpEnabled
+    )
+end
+
+UserInputService.JumpRequest:Connect(function()
+    if InfiniteJumpEnabled and Humanoid then
+        Humanoid:ChangeState(
+            Enum.HumanoidStateType.Jumping
+        )
+    end
+end)
+
+--// VOID EMPEROR
+
+local function ToggleVoidEmperor(Button)
+    VoidEmperorEnabled = not VoidEmperorEnabled
+
+    SetButtonState(
+        Button,
+        "VoidEmperor",
+        VoidEmperorEnabled
+    )
+
+    if Humanoid then
+        Humanoid.WalkSpeed =
+            VoidEmperorEnabled
+            and VOID_EMPEROR_SPEED
+            or NORMAL_WALKSPEED
+    end
+end
+
+--// VOID FLIGHT
+
+local function StopVoidFlight()
+    if FlightConnection then
+        FlightConnection:Disconnect()
+        FlightConnection = nil
+    end
+
+    if Humanoid then
+        Humanoid.PlatformStand = false
+    end
+
+    if RootPart then
+        RootPart.AssemblyLinearVelocity = Vector3.zero
+    end
+end
+
+function StartVoidFlight()
+    StopVoidFlight()
+
+    FlightConnection = RunService.RenderStepped:Connect(function()
+        if not VoidFlightEnabled then
+            return
+        end
+
+        if not Character or not Humanoid or not RootPart then
+            return
+        end
+
+        local Camera = workspace.CurrentCamera
+
+        if not Camera then
+            return
+        end
+
+        local Direction = Vector3.zero
+
+        -- MOBILE JOYSTICK
+        local MoveVector = Humanoid.MoveDirection
+
+        if MoveVector.Magnitude > 0 then
+            Direction += MoveVector
+        end
+
+        -- PC WASD
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            Direction += Camera.CFrame.LookVector
+        end
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            Direction -= Camera.CFrame.LookVector
+        end
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            Direction -= Camera.CFrame.RightVector
+        end
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            Direction += Camera.CFrame.RightVector
+        end
+
+        -- PC VERTICAL
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            Direction += Vector3.yAxis
+        end
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+            Direction -= Vector3.yAxis
+        end
+
+        Humanoid.PlatformStand = true
+
+        if Direction.Magnitude > 0 then
+            RootPart.AssemblyLinearVelocity =
+                Direction.Unit * FLIGHT_SPEED
+        else
+            RootPart.AssemblyLinearVelocity =
+                Vector3.zero
+        end
+    end)
+end
+
+local function ToggleVoidFlight(Button)
+    VoidFlightEnabled = not VoidFlightEnabled
+
+    SetButtonState(
+        Button,
+        "Void Flight",
+        VoidFlightEnabled
+    )
+
+    if VoidFlightEnabled then
+        StartVoidFlight()
+    else
+        StopVoidFlight()
+    end
+end
+
+--// VOID ABILITY
+--// Toggle state only; connect your existing ability
+--// behavior here if you already have one.
+
+local function ToggleVoidAbility(Button)
+    VoidAbilityEnabled = not VoidAbilityEnabled
+
+    SetButtonState(
+        Button,
+        "Void Ability",
+        VoidAbilityEnabled
+    )
+end
+
+--// CONNECT TO YOUR EXISTING NAVY HUB BUTTONS
+--// Change these FindFirstChild names only if your
+--// existing button objects use different names.
+
+local ButtonContainer = script.Parent
+
+local NoClipButton =
+    ButtonContainer:FindFirstChild("NoClip")
+
+local InfiniteJumpButton =
+    ButtonContainer:FindFirstChild("Infinite Jump")
+
+local VoidEmperorButton =
+    ButtonContainer:FindFirstChild("VoidEmperor")
+
+local VoidFlightButton =
+    ButtonContainer:FindFirstChild("Void Flight")
+
+local VoidAbilityButton =
+    ButtonContainer:FindFirstChild("Void Ability")
+
+if NoClipButton then
+    NoClipButton.MouseButton1Click:Connect(function()
+        ToggleNoClip(NoClipButton)
+    end)
+end
+
+if InfiniteJumpButton then
+    InfiniteJumpButton.MouseButton1Click:Connect(function()
+        ToggleInfiniteJump(InfiniteJumpButton)
+    end)
+end
+
+if VoidEmperorButton then
+    VoidEmperorButton.MouseButton1Click:Connect(function()
+        ToggleVoidEmperor(VoidEmperorButton)
+    end)
+end
+
+if VoidFlightButton then
+    VoidFlightButton.MouseButton1Click:Connect(function()
+        ToggleVoidFlight(VoidFlightButton)
+    end)
+end
+
+if VoidAbilityButton then
+    VoidAbilityButton.MouseButton1Click:Connect(function()
+        ToggleVoidAbility(VoidAbilityButton)
+    end)
+end
+
